@@ -12,7 +12,7 @@ from .markdown import parse_markdown
 from .qdrant import VectorPoint
 
 
-logger = logging.getLogger("hermes.sync")
+logger = logging.getLogger("knowledge_base_api.sync")
 
 
 def run_git(repo_path: Path, *args: str) -> subprocess.CompletedProcess[str]:

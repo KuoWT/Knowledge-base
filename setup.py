@@ -2,9 +2,9 @@ from setuptools import find_packages, setup
 
 
 setup(
-    name="hermes-kb",
+    name="knowledge-base-api",
     version="0.1.0",
-    description="Knowledge base sync skeleton for GitLab -> Hermes -> Embedding -> Qdrant",
-    packages=find_packages(include=["hermes", "hermes.*"]),
+    description="Knowledge base API for GitLab sync, embedding, and Qdrant indexing",
+    packages=find_packages(include=["knowledge_base_api", "knowledge_base_api.*"]),
     include_package_data=True,
 )

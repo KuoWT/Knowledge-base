@@ -13,7 +13,7 @@ from .store import Store, utcnow_iso
 from .sync import read_repo_markdown_files, run_git, sync_repository
 
 
-logger = logging.getLogger("hermes.service")
+logger = logging.getLogger("knowledge_base_api.service")
 
 
 @dataclass

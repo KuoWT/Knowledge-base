@@ -1,7 +1,7 @@
 import unittest
 from pathlib import Path
 
-from hermes.store import Store
+from knowledge_base_api.store import Store
 
 
 class StoreTests(unittest.TestCase):

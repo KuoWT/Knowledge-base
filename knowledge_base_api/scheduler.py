@@ -5,7 +5,7 @@ import threading
 import time
 
 
-logger = logging.getLogger("hermes.scheduler")
+logger = logging.getLogger("knowledge_base_api.scheduler")
 
 
 class Scheduler(threading.Thread):

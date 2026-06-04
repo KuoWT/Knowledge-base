@@ -16,7 +16,7 @@ def main() -> None:
         level=getattr(logging, log_level, logging.INFO),
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
-    logger = logging.getLogger("hermes")
+    logger = logging.getLogger("knowledge_base_api")
     config = load_config()
     store = Store(config.db_path)
     service = HermesService(config, store)
@@ -25,7 +25,7 @@ def main() -> None:
     scheduler.start()
     try:
         logger.info(
-            "starting hermes host=%s port=%s repo_path=%s main_branch=%s schedule_seconds=%s",
+            "starting knowledge_base_api host=%s port=%s repo_path=%s main_branch=%s schedule_seconds=%s",
             config.host,
             config.port,
             config.repo_path,
@@ -34,7 +34,7 @@ def main() -> None:
         )
         server.serve_forever()
     finally:
-        logger.info("shutting down hermes")
+        logger.info("shutting down knowledge_base_api")
         scheduler.stop()
         store.close()
 

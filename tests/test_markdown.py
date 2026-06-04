@@ -1,6 +1,6 @@
 import unittest
 
-from hermes.markdown import parse_markdown
+from knowledge_base_api.markdown import parse_markdown
 
 
 class MarkdownParseTests(unittest.TestCase):

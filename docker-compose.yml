@@ -1,12 +1,12 @@
 services:
-  hermes:
+  knowledge-base-api:
     build:
       context: .
       dockerfile: Dockerfile
     environment:
       HERMES_HOST: 0.0.0.0
       HERMES_PORT: "8080"
-      HERMES_DB_PATH: /data/hermes.db
+      HERMES_DB_PATH: /data/knowledge-base-api.db
       HERMES_REPO_PATH: /repo
       HERMES_MAIN_BRANCH: main
       HERMES_SCHEDULE_SECONDS: "3600"

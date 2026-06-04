@@ -11,7 +11,7 @@ from .store import utcnow_iso
 import logging
 
 
-logger = logging.getLogger("hermes.server")
+logger = logging.getLogger("knowledge_base_api.server")
 
 
 class HermesServer:
@@ -168,7 +168,7 @@ class HermesServer:
                 logger.debug("health check remote=%s", self.client_address[0])
                 payload = {
                     "status": "ok",
-                    "service": "hermes",
+                    "service": "knowledge_base_api",
                     "timestamp": utcnow_iso(),
                 }
                 self._send_json(HTTPStatus.OK, payload)

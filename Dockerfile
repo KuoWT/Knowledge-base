@@ -11,11 +11,11 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY setup.py /app/setup.py
-COPY hermes /app/hermes
+COPY knowledge_base_api /app/knowledge_base_api
 
 RUN python -m pip install --upgrade pip \
     && python -m pip install /app
 
 EXPOSE 8080
 
-CMD ["python", "-m", "hermes.main"]
+CMD ["python", "-m", "knowledge_base_api.main"]

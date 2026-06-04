@@ -4,6 +4,7 @@ import logging
 import hashlib
 import json
 import subprocess
+import threading
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
@@ -13,9 +14,39 @@ from .qdrant import VectorPoint
 
 
 logger = logging.getLogger("kb_api.sync")
+_safe_directory_lock = threading.Lock()
+_safe_directory_paths: set[str] = set()
+
+
+def ensure_git_safe_directory(repo_path: Path) -> None:
+    resolved = str(repo_path.resolve())
+    if resolved in _safe_directory_paths:
+        return
+    with _safe_directory_lock:
+        if resolved in _safe_directory_paths:
+            return
+        result = subprocess.run(
+            ["git", "config", "--global", "--get-all", "safe.directory"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        configured_paths = {line.strip() for line in result.stdout.splitlines() if line.strip()}
+        if resolved not in configured_paths:
+            add_result = subprocess.run(
+                ["git", "config", "--global", "--add", "safe.directory", resolved],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            if add_result.returncode != 0:
+                raise RuntimeError(add_result.stderr.strip() or f"failed to mark safe directory: {resolved}")
+            logger.info("git safe.directory configured path=%s", resolved)
+        _safe_directory_paths.add(resolved)
 
 
 def run_git(repo_path: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    ensure_git_safe_directory(repo_path)
     return subprocess.run(
         ["git", "-C", str(repo_path), *args],
         check=False,

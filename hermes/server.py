@@ -8,6 +8,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 from .store import utcnow_iso
+import logging
+
+
+logger = logging.getLogger("hermes.server")
 
 
 class HermesServer:
@@ -70,19 +74,23 @@ class HermesServer:
                 self._send_json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
 
             def handle_gitlab_webhook(self):
+                logger.info("webhook received path=%s remote=%s", self.path, self.client_address[0])
                 if server.config.webhook_token:
                     token = self.headers.get("X-Gitlab-Token")
                     if token != server.config.webhook_token:
+                        logger.warning("webhook rejected invalid token remote=%s", self.client_address[0])
                         self._send_json(HTTPStatus.FORBIDDEN, {"error": "invalid_token"})
                         return
                 payload = self._read_json()
                 event_type = payload.get("event_type") or payload.get("object_kind")
                 if event_type not in {"merge", "merge_request", "merge_request_merged", "push"}:
+                    logger.warning("webhook rejected unsupported event_type=%s", event_type)
                     self._send_json(HTTPStatus.BAD_REQUEST, {"error": "unsupported_event"})
                     return
                 if event_type == "push":
                     ref = payload.get("ref", "")
                     if not ref.endswith(f"/{server.config.main_branch}"):
+                        logger.info("webhook ignored non-main push ref=%s", ref)
                         self._send_json(HTTPStatus.OK, {"status": "ignored"})
                         return
                 task = server.service.enqueue_sync(
@@ -94,6 +102,7 @@ class HermesServer:
                     delivery_id=self.headers.get("X-Gitlab-Delivery") or payload.get("delivery_id"),
                     trigger_reason="webhook",
                 )
+                logger.info("webhook accepted task_id=%s event_type=%s branch=%s", task.task_id, event_type, task.branch)
                 self._send_json(HTTPStatus.ACCEPTED, {"task_id": task.task_id, "status": task.status})
 
             def handle_create_task(self):
@@ -107,6 +116,7 @@ class HermesServer:
                     delivery_id=payload.get("delivery_id"),
                     trigger_reason=payload.get("trigger_reason") or "api",
                 )
+                logger.info("api task created task_id=%s source=%s", task.task_id, task.source)
                 self._send_json(HTTPStatus.ACCEPTED, {"task_id": task.task_id, "status": task.status})
 
             def handle_get_task(self, path: str):
@@ -135,6 +145,7 @@ class HermesServer:
             def handle_retry_task(self, path: str):
                 task_id = path.split("/")[-2]
                 task = server.service.retry_task(task_id)
+                logger.info("task retry requested task_id=%s", task.task_id)
                 self._send_json(HTTPStatus.ACCEPTED, {"task_id": task.task_id, "status": task.status})
 
             def handle_reindex(self):
@@ -150,9 +161,11 @@ class HermesServer:
                     paths=payload.get("paths") or [],
                     full_repository=payload.get("scope") == "repository",
                 )
+                logger.info("manual reindex requested task_id=%s scope=%s", task.task_id, payload.get("scope"))
                 self._send_json(HTTPStatus.ACCEPTED, {"task_id": task.task_id, "status": task.status})
 
             def handle_health(self):
+                logger.debug("health check remote=%s", self.client_address[0])
                 payload = {
                     "status": "ok",
                     "service": "hermes",

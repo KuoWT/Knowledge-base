@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import hashlib
 import json
 import subprocess
@@ -9,6 +10,9 @@ from typing import Any
 
 from .markdown import parse_markdown
 from .qdrant import VectorPoint
+
+
+logger = logging.getLogger("hermes.sync")
 
 
 def run_git(repo_path: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -46,6 +50,7 @@ def read_tracked_files(repo_path: Path, base_sha: str | None, head_sha: str | No
     if result.returncode != 0:
         raise RuntimeError(result.stderr.strip() or "failed to diff revisions")
     files = [line.strip() for line in result.stdout.splitlines() if line.strip().endswith(".md")]
+    logger.debug("tracked files repo_path=%s base_sha=%s head_sha=%s files=%s", repo_path, base_sha, head_sha, files)
     return files
 
 
@@ -73,10 +78,12 @@ def build_points(
 ) -> list[VectorPoint]:
     content = read_file(repo_path, rel_path)
     if not content:
+        logger.info("markdown file missing rel_path=%s", rel_path)
         return []
     chunks = parse_markdown(content)
     points: list[VectorPoint] = []
     content_hash = file_sha(content)
+    logger.info("building points rel_path=%s chunks=%s", rel_path, len(chunks))
     for chunk in chunks:
         payload = {
             "task_id": task_id,
@@ -112,6 +119,7 @@ def sync_repository(
     changed_files = read_tracked_files(repo_path, store.get_value("last_synced_sha"), commit_sha)
     upsert_points: list[VectorPoint] = []
     deleted_points: list[str] = []
+    logger.info("sync repository start task_id=%s changed_files=%s", task_id, changed_files)
     for rel_path in changed_files:
         content = read_file(repo_path, rel_path)
         if not content:
@@ -125,6 +133,12 @@ def sync_repository(
         qdrant_writer.delete(collection, deleted_points)
     if commit_sha:
         store.set_value("last_synced_sha", commit_sha)
+    logger.info(
+        "sync repository done task_id=%s upserted=%s deleted=%s",
+        task_id,
+        len(upsert_points),
+        len(deleted_points),
+    )
     return {
         "changed_files": changed_files,
         "upserted": len(upsert_points),

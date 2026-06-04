@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import queue
 import threading
 import uuid
@@ -10,6 +11,9 @@ from typing import Any
 from .qdrant import HttpQdrantWriter, LocalQdrantWriter, NoopQdrantWriter
 from .store import Store, utcnow_iso
 from .sync import read_repo_markdown_files, run_git, sync_repository
+
+
+logger = logging.getLogger("hermes.service")
 
 
 @dataclass
@@ -60,6 +64,15 @@ class HermesService:
             (None, task_id),
         )
         self.store.conn.commit()
+        logger.info(
+            "task queued task_id=%s source=%s event_type=%s branch=%s commit_sha=%s trigger_reason=%s",
+            task_id,
+            source,
+            event_type,
+            branch,
+            commit_sha,
+            trigger_reason,
+        )
         self.queue.put(
             self._serialize_job(
                 task_id=task_id,
@@ -76,13 +89,16 @@ class HermesService:
         if task is None:
             raise KeyError(task_id)
         self.store.update_task(task_id, status="retrying")
+        logger.info("task retrying task_id=%s source=%s", task_id, task.source)
         self.queue.put(self._serialize_job(task_id=task_id, commit_sha=task.commit_sha, branch=task.branch or self.config.main_branch, paths=[], full_repository=False))
         return self.store.get_task(task_id)
 
     def schedule_check(self) -> None:
+        logger.info("scheduler check started")
         last = self.store.get_value("last_synced_sha")
         head = self._git_head()
         if head and head != last:
+            logger.info("scheduler detected new head head=%s last_synced_sha=%s", head, last)
             self.enqueue_sync(
                 source="scheduler",
                 event_type="scheduled_check",
@@ -95,6 +111,7 @@ class HermesService:
             return
         failed = self.store.list_tasks("status = ?", ("failed",))
         if failed:
+            logger.info("scheduler found failed tasks count=%s", len(failed))
             self.enqueue_sync(
                 source="scheduler",
                 event_type="retry_failed",
@@ -127,11 +144,14 @@ class HermesService:
             job = self._deserialize_job(payload)
             task_id = job["task_id"]
             try:
+                logger.info("task started task_id=%s source=%s", task_id, self.store.get_task(task_id).source)
                 self.store.update_task(task_id, status="running", started_at=utcnow_iso())
                 self._process_task(job)
                 self.store.update_task(task_id, status="succeeded", finished_at=utcnow_iso(), error=None)
+                logger.info("task succeeded task_id=%s", task_id)
             except Exception as exc:  # pragma: no cover - defensive
                 self.store.update_task(task_id, status="failed", finished_at=utcnow_iso(), error=str(exc))
+                logger.exception("task failed task_id=%s error=%s", task_id, exc)
             finally:
                 self.queue.task_done()
 
@@ -141,7 +161,9 @@ class HermesService:
         branch = job.get("branch") or self.config.main_branch
         result = run_git(self.config.repo_path, "pull", "--ff-only")
         if result.returncode != 0:
+            logger.error("git pull failed task_id=%s stderr=%s", task_id, result.stderr.strip())
             raise RuntimeError(result.stderr.strip() or "git pull failed")
+        logger.info("git pull ok task_id=%s branch=%s", task_id, branch)
         writer = self.qdrant_writer()
         result = sync_repository(
             repo_path=self.config.repo_path,
@@ -151,6 +173,13 @@ class HermesService:
             commit_sha=commit_sha,
             branch=branch,
             collection=self.config.qdrant_collection,
+        )
+        logger.info(
+            "sync completed task_id=%s changed_files=%s upserted=%s deleted=%s",
+            task_id,
+            len(result.get("changed_files", [])),
+            result.get("upserted"),
+            result.get("deleted"),
         )
         for point in result.get("points", []):
             self.store.add_index_record(

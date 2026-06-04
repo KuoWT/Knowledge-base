@@ -1,7 +1,7 @@
 # 知識庫系統架構說明
 
 ## 1. 架構總覽
-系統以 GitLab 作為唯一正式來源，Hermes 負責接收變更事件、執行同步、完成 embedding，最後寫入 Qdrant。
+系統以 GitLab 作為唯一正式來源，Knowledge Base API 負責接收變更事件、執行同步、完成 embedding，最後寫入 Qdrant。
 
 ```mermaid
 flowchart TD
@@ -11,7 +11,7 @@ flowchart TD
   E[User] --> F[Agent整理 md]
   F --> D
   D --> G[Webhook]
-  G --> H[Hermes]
+  G --> H[Knowledge Base API]
   H --> I[Git Pull]
   I --> J[Markdown Parse / Chunk]
   J --> K[Embedding]
@@ -33,19 +33,19 @@ flowchart TD
 
 ### 2.3 Webhook
 - 只在 merge 事件後觸發正式同步。
-- 將事件送往 Hermes。
+- 將事件送往 Knowledge Base API。
 - 建議加上驗證機制，避免偽造請求。
 
-### 2.4 Hermes
+### 2.4 Knowledge Base API
 - 知識庫同步與索引的核心協調層。
 - 接收 webhook 後啟動增量同步。
 - 透過自己的 MCP 寫入能力完成寫入。
 - 管理任務狀態、重試與失敗紀錄。
 
 ### 2.5 MCP
-- Hermes 的寫入介面。
+- Knowledge Base API 的寫入介面。
 - 負責把整理好的索引資料寫入後端。
-- 可視為 Hermes 內部已完成的能力之一。
+- 可視為 API 內部已完成的能力之一。
 
 ### 2.6 Embedding
 - 僅針對 Markdown 內容建立向量。
@@ -64,8 +64,8 @@ flowchart TD
 2. Push 到 GitLab。
 3. Merge 到主分支。
 4. GitLab 發送 webhook。
-5. Hermes 拉取最新內容。
-6. Hermes 只處理變更的 Markdown。
+5. API 拉取最新內容。
+6. API 只處理變更的 Markdown。
 7. Chunk、embedding、寫入 Qdrant。
 
 ### 3.2 Agent 協作路徑

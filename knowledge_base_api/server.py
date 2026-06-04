@@ -65,6 +65,9 @@ class HermesServer:
                 if parsed.path == "/health":
                     self.handle_health()
                     return
+                if parsed.path == "/ready":
+                    self.handle_ready()
+                    return
                 if parsed.path == "/api/v1/sync-tasks":
                     self.handle_list_tasks(parsed.query)
                     return
@@ -172,6 +175,49 @@ class HermesServer:
                     "timestamp": utcnow_iso(),
                 }
                 self._send_json(HTTPStatus.OK, payload)
+
+            def handle_ready(self):
+                checks = {
+                    "db": self._check_db(),
+                    "repo": self._check_repo(),
+                    "git": self._check_git(),
+                }
+                ready = all(checks.values())
+                payload = {
+                    "status": "ok" if ready else "not_ready",
+                    "service": "kb_api",
+                    "checks": checks,
+                    "timestamp": utcnow_iso(),
+                }
+                self._send_json(HTTPStatus.OK if ready else HTTPStatus.SERVICE_UNAVAILABLE, payload)
+
+            def _check_db(self) -> bool:
+                try:
+                    server.store.conn.execute("SELECT 1")
+                    return True
+                except Exception:
+                    logger.exception("ready check db failed")
+                    return False
+
+            def _check_repo(self) -> bool:
+                try:
+                    from pathlib import Path
+
+                    path = Path(server.config.repo_path)
+                    return path.exists() and path.is_dir()
+                except Exception:
+                    logger.exception("ready check repo failed")
+                    return False
+
+            def _check_git(self) -> bool:
+                try:
+                    from .sync import run_git
+
+                    result = run_git(server.config.repo_path, "rev-parse", "--git-dir")
+                    return result.returncode == 0
+                except Exception:
+                    logger.exception("ready check git failed")
+                    return False
 
         return Handler
 

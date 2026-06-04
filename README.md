@@ -25,6 +25,11 @@ docker run --rm -p 8080:8080 \
   knowledge-base-api:latest
 ```
 
+Health endpoints:
+
+- `GET /health` returns service liveness
+- `GET /ready` returns dependency readiness checks
+
 Environment variables:
 
 - `KB_API_HOST` default `127.0.0.1`

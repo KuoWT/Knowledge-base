@@ -13,7 +13,6 @@ class Config:
     repo_path: Path
     main_branch: str
     webhook_token: str | None
-    schedule_seconds: int
     qdrant_url: str | None
     qdrant_collection: str
 
@@ -26,7 +25,6 @@ def load_config() -> Config:
         repo_path=Path(os.getenv("HERMES_REPO_PATH", os.getcwd())).expanduser(),
         main_branch=os.getenv("HERMES_MAIN_BRANCH", "main"),
         webhook_token=os.getenv("HERMES_WEBHOOK_TOKEN") or None,
-        schedule_seconds=int(os.getenv("HERMES_SCHEDULE_SECONDS", "3600")),
         qdrant_url=os.getenv("QDRANT_URL") or None,
         qdrant_collection=os.getenv("QDRANT_COLLECTION", "knowledge_base"),
     )

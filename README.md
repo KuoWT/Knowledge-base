@@ -7,7 +7,6 @@ This repo contains a minimal, dependency-free Python implementation of the knowl
 - Markdown parsing and chunking
 - Embedding write abstraction
 - Qdrant write abstraction
-- Scheduler for repair/re-sync
 
 ## Run
 
@@ -34,7 +33,6 @@ Environment variables:
 - `HERMES_REPO_PATH` default current working directory
 - `HERMES_MAIN_BRANCH` default `main`
 - `HERMES_WEBHOOK_TOKEN` optional shared token
-- `HERMES_SCHEDULE_SECONDS` default `3600`
 - `QDRANT_URL` optional Qdrant REST endpoint
 - `QDRANT_COLLECTION` default `knowledge_base`
 

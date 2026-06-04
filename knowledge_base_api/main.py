@@ -4,7 +4,6 @@ import logging
 import os
 
 from .config import load_config
-from .scheduler import Scheduler
 from .server import HermesServer
 from .service import HermesService
 from .store import Store
@@ -21,21 +20,17 @@ def main() -> None:
     store = Store(config.db_path)
     service = HermesService(config, store)
     server = HermesServer(config, store, service)
-    scheduler = Scheduler(config.schedule_seconds, service.schedule_check)
-    scheduler.start()
     try:
         logger.info(
-            "starting knowledge_base_api host=%s port=%s repo_path=%s main_branch=%s schedule_seconds=%s",
+            "starting knowledge_base_api host=%s port=%s repo_path=%s main_branch=%s",
             config.host,
             config.port,
             config.repo_path,
             config.main_branch,
-            config.schedule_seconds,
         )
         server.serve_forever()
     finally:
         logger.info("shutting down knowledge_base_api")
-        scheduler.stop()
         store.close()
 
 

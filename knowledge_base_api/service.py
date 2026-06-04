@@ -4,22 +4,14 @@ import logging
 import queue
 import threading
 import uuid
-from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
-from .qdrant import HttpQdrantWriter, LocalQdrantWriter, NoopQdrantWriter
+from .qdrant import HttpQdrantWriter, LocalQdrantWriter
 from .store import Store, utcnow_iso
-from .sync import read_repo_markdown_files, run_git, sync_repository
+from .sync import run_git, sync_repository
 
 
 logger = logging.getLogger("knowledge_base_api.service")
-
-
-@dataclass
-class EnqueuedSync:
-    task_id: str
-    status: str
 
 
 class HermesService:
@@ -92,41 +84,6 @@ class HermesService:
         logger.info("task retrying task_id=%s source=%s", task_id, task.source)
         self.queue.put(self._serialize_job(task_id=task_id, commit_sha=task.commit_sha, branch=task.branch or self.config.main_branch, paths=[], full_repository=False))
         return self.store.get_task(task_id)
-
-    def schedule_check(self) -> None:
-        logger.info("scheduler check started")
-        last = self.store.get_value("last_synced_sha")
-        head = self._git_head()
-        if head and head != last:
-            logger.info("scheduler detected new head head=%s last_synced_sha=%s", head, last)
-            self.enqueue_sync(
-                source="scheduler",
-                event_type="scheduled_check",
-                project_id=None,
-                branch=self.config.main_branch,
-                commit_sha=head,
-                delivery_id=None,
-                trigger_reason="scheduler_catchup",
-            )
-            return
-        failed = self.store.list_tasks("status = ?", ("failed",))
-        if failed:
-            logger.info("scheduler found failed tasks count=%s", len(failed))
-            self.enqueue_sync(
-                source="scheduler",
-                event_type="retry_failed",
-                project_id=None,
-                branch=self.config.main_branch,
-                commit_sha=head,
-                delivery_id=None,
-                trigger_reason="scheduler_retry",
-            )
-
-    def _git_head(self) -> str | None:
-        result = run_git(self.config.repo_path, "rev-parse", "HEAD")
-        if result.returncode != 0:
-            return None
-        return result.stdout.strip()
 
     def _serialize_job(self, **kwargs: Any) -> str:
         import json

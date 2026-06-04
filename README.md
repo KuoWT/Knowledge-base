@@ -62,6 +62,52 @@ docker run --rm -p 8080:8080 \
   knowledge-base-api:latest
 ```
 
+## Docker Compose Settings
+
+Use `.env` for local deployment:
+
+```env
+KB_API_HOST=0.0.0.0
+KB_API_PORT=8080
+KB_API_HOST_PORT=8081
+KB_API_DB_PATH=/data/knowledge-base-api.db
+KB_API_REPO_PATH=/repo
+KB_API_MAIN_BRANCH=main
+KB_API_WEBHOOK_TOKEN=your-webhook-token
+KB_API_LOG_LEVEL=INFO
+QDRANT_URL=
+QDRANT_COLLECTION=knowledge_base
+```
+
+Compose mapping:
+
+- `KB_API_HOST_PORT` is the host port exposed on your machine.
+- `KB_API_DB_PATH` is the SQLite file inside the container.
+- `KB_API_REPO_PATH=/repo` means the container expects a mounted Git repository at `/repo`.
+- `./:/repo` in `docker-compose.yml` mounts the current project directory into the container.
+- If you want to use a different local repository, change the host-side volume path in `docker-compose.yml` to that clone path.
+
+Recommended host-side repo setup:
+
+```bash
+git clone <your GitLab repo URL> /opt/knowledge-base
+```
+
+Then adjust the compose volume if needed:
+
+```yaml
+volumes:
+  - hermes_data:/data
+  - /opt/knowledge-base:/repo
+```
+
+GitLab webhook settings:
+
+- URL: `http://YOUR_SERVER_IP:8081/webhooks/gitlab`
+- Secret token: same value as `KB_API_WEBHOOK_TOKEN`
+- Recommended event: `Merge request events`
+- The API checks `X-Gitlab-Token` against `KB_API_WEBHOOK_TOKEN`
+
 Health endpoints:
 
 - `GET /health` returns service liveness

@@ -8,6 +8,43 @@ This repo contains a minimal, dependency-free Python implementation of the knowl
 - Embedding write abstraction
 - Qdrant write abstraction
 
+## Current Flow
+
+```mermaid
+flowchart TD
+  A[Engineer / User] --> B[Obsidian]
+  B --> C[Git Push]
+  C --> D[GitLab]
+  D --> E[Webhook / API]
+
+  E --> F[POST /webhooks/gitlab]
+  E --> G[POST /api/v1/sync-tasks]
+  E --> H[POST /api/v1/reindex]
+
+  F --> I[Validate token / parse event]
+  G --> J[Create sync task]
+  H --> J
+  I --> J
+
+  J --> K[SQLite sync_tasks]
+  K --> L[Background worker queue]
+  L --> M[git pull --ff-only]
+  M --> N[Detect changed files]
+  N --> O[Process .md only]
+  O --> P[Markdown parse / chunk]
+  P --> Q[Embedding]
+  Q --> R[Qdrant writer]
+  R --> S[Qdrant]
+
+  J --> T[Task status]
+  T --> U[GET /api/v1/sync-tasks]
+  T --> V[GET /api/v1/sync-tasks/{task_id}]
+  T --> W[POST /api/v1/sync-tasks/{task_id}/retry]
+
+  X[GET /health] --> Y[Liveness]
+  Z[GET /ready] --> AA[DB / Repo / Git checks]
+```
+
 ## Run
 
 ```bash
@@ -29,6 +66,15 @@ Health endpoints:
 
 - `GET /health` returns service liveness
 - `GET /ready` returns dependency readiness checks
+
+API endpoints:
+
+- `POST /webhooks/gitlab`
+- `POST /api/v1/sync-tasks`
+- `GET /api/v1/sync-tasks`
+- `GET /api/v1/sync-tasks/{task_id}`
+- `POST /api/v1/sync-tasks/{task_id}/retry`
+- `POST /api/v1/reindex`
 
 Environment variables:
 

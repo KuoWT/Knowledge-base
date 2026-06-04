@@ -5,18 +5,39 @@
 
 ```mermaid
 flowchart TD
-  A[Engineer] --> B[Obsidian]
+  A[Engineer / User] --> B[Obsidian]
   B --> C[Git Push]
   C --> D[GitLab]
   E[User] --> F[Agent整理 md]
   F --> D
-  D --> G[Webhook]
-  G --> H[Knowledge Base API]
-  H --> I[Git Pull]
-  I --> J[Markdown Parse / Chunk]
-  J --> K[Embedding]
-  K --> L[Qdrant]
-  H --> M[MCP Write]
+  D --> G[Webhook / API]
+
+  G --> H[POST /webhooks/gitlab]
+  G --> I[POST /api/v1/sync-tasks]
+  G --> J[POST /api/v1/reindex]
+
+  H --> K[Validate token / parse event]
+  I --> L[Create sync task]
+  J --> L
+  K --> L
+
+  L --> M[SQLite sync_tasks]
+  M --> N[Background worker queue]
+  N --> O[git pull --ff-only]
+  O --> P[Detect changed files]
+  P --> Q[Process .md only]
+  Q --> R[Markdown Parse / Chunk]
+  R --> S[Embedding]
+  S --> T[Qdrant Writer]
+  T --> U[Qdrant]
+
+  L --> V[Task status]
+  V --> W[GET /api/v1/sync-tasks]
+  V --> X[GET /api/v1/sync-tasks/{task_id}]
+  V --> Y[POST /api/v1/sync-tasks/{task_id}/retry]
+
+  Z[GET /health] --> AA[Liveness]
+  BB[GET /ready] --> CC[DB / Repo / Git checks]
 ```
 
 ## 2. 元件職責
@@ -64,9 +85,10 @@ flowchart TD
 2. Push 到 GitLab。
 3. Merge 到主分支。
 4. GitLab 發送 webhook。
-5. API 拉取最新內容。
-6. API 只處理變更的 Markdown。
-7. Chunk、embedding、寫入 Qdrant。
+5. API 建立同步任務。
+6. 背景 worker 執行 `git pull --ff-only`。
+7. API 只處理變更的 Markdown。
+8. Chunk、embedding、寫入 Qdrant。
 
 ### 3.2 Agent 協作路徑
 1. User 下指令給 agent。
@@ -75,13 +97,27 @@ flowchart TD
 4. 仍以 merge 後版本作為正式內容。
 5. 後續同步流程與人工路徑相同。
 
-## 4. 資料流原則
+## 4. API 與狀態檢查
+
+### 4.1 健康檢查
+- `GET /health` 用來表示服務活著。
+- `GET /ready` 用來檢查 DB、Repo、Git 是否可用。
+
+### 4.2 任務 API
+- `POST /webhooks/gitlab` 接收 GitLab webhook。
+- `POST /api/v1/sync-tasks` 建立同步任務。
+- `GET /api/v1/sync-tasks` 查詢任務列表。
+- `GET /api/v1/sync-tasks/{task_id}` 查詢單筆任務。
+- `POST /api/v1/sync-tasks/{task_id}/retry` 重新排程失敗任務。
+- `POST /api/v1/reindex` 觸發手動重建。
+
+## 5. 資料流原則
 - GitLab 為唯一真實來源。
 - Qdrant 只保存已合併版本對應的索引。
 - 附件保留在 GitLab，但不進索引。
 - 所有同步動作應可重跑且可追蹤。
 
-## 5. 建議設計原則
+## 6. 建議設計原則
 - 事件驅動優先，不做手動批次重建。
 - 增量處理優先，不做每次全量索引。
 - 寫入與同步分離，避免 webhook 直接承擔重活。

@@ -10,7 +10,7 @@ from .store import Store
 
 
 def main() -> None:
-    log_level = os.getenv("HERMES_LOG_LEVEL", "INFO").upper()
+    log_level = os.getenv("KB_API_LOG_LEVEL", "INFO").upper()
     logging.basicConfig(
         level=getattr(logging, log_level, logging.INFO),
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",

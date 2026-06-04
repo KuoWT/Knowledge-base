@@ -19,12 +19,12 @@ class Config:
 
 def load_config() -> Config:
     return Config(
-        host=os.getenv("HERMES_HOST", "127.0.0.1"),
-        port=int(os.getenv("HERMES_PORT", "8080")),
-        db_path=Path(os.getenv("HERMES_DB_PATH", "./knowledge-base-api.db")).expanduser(),
-        repo_path=Path(os.getenv("HERMES_REPO_PATH", os.getcwd())).expanduser(),
-        main_branch=os.getenv("HERMES_MAIN_BRANCH", "main"),
-        webhook_token=os.getenv("HERMES_WEBHOOK_TOKEN") or None,
+        host=os.getenv("KB_API_HOST", "127.0.0.1"),
+        port=int(os.getenv("KB_API_PORT", "8080")),
+        db_path=Path(os.getenv("KB_API_DB_PATH", "./knowledge-base-api.db")).expanduser(),
+        repo_path=Path(os.getenv("KB_API_REPO_PATH", os.getcwd())).expanduser(),
+        main_branch=os.getenv("KB_API_MAIN_BRANCH", "main"),
+        webhook_token=os.getenv("KB_API_WEBHOOK_TOKEN") or None,
         qdrant_url=os.getenv("QDRANT_URL") or None,
         qdrant_collection=os.getenv("QDRANT_COLLECTION", "knowledge_base"),
     )

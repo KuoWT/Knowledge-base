@@ -66,6 +66,7 @@ Health endpoints:
 
 - `GET /health` returns service liveness
 - `GET /ready` returns dependency readiness checks
+- `GET /` or `GET /ui` opens the task monitor page
 
 API endpoints:
 

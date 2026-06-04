@@ -26,10 +26,336 @@ class HermesServer:
         server = self
 
         class Handler(BaseHTTPRequestHandler):
+            UI_HTML = """<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Knowledge Base API Task Monitor</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b1020;
+      --panel: #121a33;
+      --panel-2: #18213f;
+      --text: #e7ecff;
+      --muted: #9aa7d6;
+      --line: #26335f;
+      --accent: #7c9cff;
+      --good: #52d273;
+      --warn: #f5c451;
+      --bad: #ff6b6b;
+      --chip: #223058;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(124,156,255,.18), transparent 30%),
+        radial-gradient(circle at top right, rgba(82,210,115,.12), transparent 22%),
+        var(--bg);
+      color: var(--text);
+    }
+    .wrap { max-width: 1320px; margin: 0 auto; padding: 32px 20px 40px; }
+    header {
+      display: flex; justify-content: space-between; gap: 20px; align-items: end; flex-wrap: wrap;
+      margin-bottom: 22px;
+    }
+    h1 { margin: 0; font-size: 30px; letter-spacing: .02em; }
+    .sub { margin-top: 8px; color: var(--muted); }
+    .toolbar {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+      padding: 14px; background: rgba(18,26,51,.9); border: 1px solid var(--line); border-radius: 16px;
+      margin-bottom: 18px;
+    }
+    select, button {
+      border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); color: var(--text);
+      padding: 10px 12px; font-size: 14px;
+    }
+    button { cursor: pointer; }
+    button:hover { border-color: var(--accent); }
+    .grid {
+      display: grid; grid-template-columns: 1.45fr .9fr; gap: 18px;
+    }
+    .card {
+      background: rgba(18,26,51,.92); border: 1px solid var(--line); border-radius: 18px;
+      overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,.22);
+    }
+    .card h2 {
+      margin: 0; padding: 16px 18px; font-size: 16px; border-bottom: 1px solid var(--line);
+      background: rgba(24,33,63,.82);
+    }
+    .card-body { padding: 16px 18px 18px; }
+    .stats {
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px;
+    }
+    .stat {
+      background: var(--panel-2); border: 1px solid var(--line); border-radius: 14px; padding: 12px;
+    }
+    .stat .label { color: var(--muted); font-size: 12px; }
+    .stat .value { margin-top: 8px; font-size: 22px; font-weight: 700; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      text-align: left; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted);
+      padding: 12px 10px; border-bottom: 1px solid var(--line);
+    }
+    tbody td {
+      padding: 12px 10px; border-bottom: 1px solid rgba(38,51,95,.6); vertical-align: top;
+      font-size: 14px;
+    }
+    tbody tr:hover { background: rgba(124,156,255,.07); cursor: pointer; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px;
+      background: var(--chip); border: 1px solid var(--line); font-size: 12px;
+    }
+    .status-queued { color: var(--warn); }
+    .status-running { color: var(--accent); }
+    .status-succeeded { color: var(--good); }
+    .status-failed { color: var(--bad); }
+    .details {
+      white-space: pre-wrap; word-break: break-word;
+      background: #091022; border: 1px solid var(--line); border-radius: 14px;
+      padding: 14px; min-height: 280px; color: var(--text); font-size: 13px; line-height: 1.5;
+    }
+    .muted { color: var(--muted); }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; background: rgba(124,156,255,.12); color: var(--text); font-size: 12px; }
+    .footer { margin-top: 16px; color: var(--muted); font-size: 12px; }
+    @media (max-width: 980px) {
+      .grid { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 640px) {
+      .stats { grid-template-columns: 1fr; }
+      h1 { font-size: 24px; }
+      .wrap { padding: 18px 12px 28px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Knowledge Base API Task Monitor</h1>
+        <div class="sub">即時查看 webhook / API 建立的同步任務，點選任務可檢視詳細內容與重試。</div>
+      </div>
+      <div class="actions">
+        <button id="refreshBtn">Refresh</button>
+        <button id="retrySelectedBtn">Retry Selected</button>
+      </div>
+    </header>
+
+    <div class="toolbar">
+      <label class="chip">Status
+        <select id="statusFilter">
+          <option value="">All</option>
+          <option value="queued">queued</option>
+          <option value="running">running</option>
+          <option value="succeeded">succeeded</option>
+          <option value="failed">failed</option>
+          <option value="retrying">retrying</option>
+        </select>
+      </label>
+      <label class="chip">Source
+        <select id="sourceFilter">
+          <option value="">All</option>
+          <option value="gitlab_webhook">gitlab_webhook</option>
+          <option value="api">api</option>
+          <option value="manual_reindex">manual_reindex</option>
+        </select>
+      </label>
+      <span class="muted">Auto refresh: 5s</span>
+      <span class="pill" id="summaryText">loading...</span>
+    </div>
+
+    <div class="grid">
+      <section class="card">
+        <h2>Tasks</h2>
+        <div class="card-body" style="padding:0;">
+          <table>
+            <thead>
+              <tr>
+                <th>Task</th>
+                <th>Status</th>
+                <th>Source</th>
+                <th>Branch</th>
+                <th>Commit</th>
+                <th>Updated</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="taskTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Task Detail</h2>
+        <div class="card-body">
+          <div class="details" id="detailPane">Select a task to inspect its full payload and status history.</div>
+        </div>
+      </section>
+    </div>
+
+    <div class="footer">Endpoints: /health, /ready, /api/v1/sync-tasks, /api/v1/sync-tasks/{task_id}, /api/v1/sync-tasks/{task_id}/retry</div>
+  </div>
+
+  <script>
+    const state = { tasks: [], selectedTaskId: null, timer: null };
+
+    const els = {
+      taskTable: document.getElementById('taskTable'),
+      detailPane: document.getElementById('detailPane'),
+      statusFilter: document.getElementById('statusFilter'),
+      sourceFilter: document.getElementById('sourceFilter'),
+      summaryText: document.getElementById('summaryText'),
+      refreshBtn: document.getElementById('refreshBtn'),
+      retrySelectedBtn: document.getElementById('retrySelectedBtn'),
+    };
+
+    function escapeText(value) {
+      return String(value ?? '');
+    }
+
+    function formatTs(value) {
+      return value ? new Date(value).toLocaleString() : '-';
+    }
+
+    function statusClass(value) {
+      return `status-${value || 'queued'}`;
+    }
+
+    function renderSummary(items) {
+      const counts = items.reduce((acc, item) => {
+        acc[item.status || 'unknown'] = (acc[item.status || 'unknown'] || 0) + 1;
+        return acc;
+      }, {});
+      const total = items.length;
+      els.summaryText.textContent = `total ${total} | queued ${counts.queued || 0} | running ${counts.running || 0} | succeeded ${counts.succeeded || 0} | failed ${counts.failed || 0}`;
+    }
+
+    function renderRows(items) {
+      if (!items.length) {
+        els.taskTable.innerHTML = '<tr><td colspan="7" class="muted" style="padding:16px 10px;">No tasks found.</td></tr>';
+        return;
+      }
+      els.taskTable.innerHTML = items.map((task) => `
+        <tr data-task-id="${escapeText(task.task_id)}">
+          <td class="mono">${escapeText(task.task_id)}</td>
+          <td><span class="chip ${statusClass(task.status)}">${escapeText(task.status)}</span></td>
+          <td>${escapeText(task.source)}</td>
+          <td>${escapeText(task.branch || '-')}</td>
+          <td class="mono">${escapeText(task.commit_sha || '-')}</td>
+          <td>${formatTs(task.updated_at)}</td>
+          <td><button data-retry="${escapeText(task.task_id)}">Retry</button></td>
+        </tr>
+      `).join('');
+
+      for (const row of els.taskTable.querySelectorAll('tr[data-task-id]')) {
+        row.addEventListener('click', () => selectTask(row.dataset.taskId));
+      }
+      for (const button of els.taskTable.querySelectorAll('button[data-retry]')) {
+        button.addEventListener('click', async (event) => {
+          event.stopPropagation();
+          await retryTask(button.dataset.retry);
+        });
+      }
+    }
+
+    function renderDetail(task) {
+      if (!task) {
+        els.detailPane.textContent = 'Select a task to inspect its full payload and status history.';
+        return;
+      }
+      els.detailPane.textContent = JSON.stringify(task, null, 2);
+    }
+
+    async function fetchTasks() {
+      const params = new URLSearchParams();
+      if (els.statusFilter.value) params.set('status', els.statusFilter.value);
+      if (els.sourceFilter.value) params.set('source', els.sourceFilter.value);
+      const url = '/api/v1/sync-tasks' + (params.toString() ? `?${params}` : '');
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`failed to load tasks: ${response.status}`);
+      const data = await response.json();
+      state.tasks = data.items || [];
+      renderSummary(state.tasks);
+      renderRows(state.tasks);
+      if (state.selectedTaskId && !state.tasks.some((task) => task.task_id === state.selectedTaskId)) {
+        state.selectedTaskId = null;
+      }
+      if (state.selectedTaskId) {
+        const selected = state.tasks.find((task) => task.task_id === state.selectedTaskId);
+        renderDetail(selected || null);
+      }
+    }
+
+    async function selectTask(taskId) {
+      state.selectedTaskId = taskId;
+      const response = await fetch(`/api/v1/sync-tasks/${encodeURIComponent(taskId)}`);
+      if (!response.ok) {
+        renderDetail({ error: `Failed to load task ${taskId}`, status: response.status });
+        return;
+      }
+      const task = await response.json();
+      renderDetail(task);
+      for (const row of els.taskTable.querySelectorAll('tr[data-task-id]')) {
+        row.style.background = row.dataset.taskId === taskId ? 'rgba(124,156,255,.12)' : '';
+      }
+    }
+
+    async function retryTask(taskId) {
+      const response = await fetch(`/api/v1/sync-tasks/${encodeURIComponent(taskId)}/retry`, { method: 'POST' });
+      if (!response.ok) {
+        alert(`Retry failed: ${response.status}`);
+        return;
+      }
+      await refresh();
+      await selectTask(taskId);
+    }
+
+    async function refresh() {
+      try {
+        await fetchTasks();
+      } catch (error) {
+        els.summaryText.textContent = 'failed to load tasks';
+        els.taskTable.innerHTML = '<tr><td colspan="7" class="muted" style="padding:16px 10px;">Failed to load tasks. Check API logs.</td></tr>';
+        els.detailPane.textContent = String(error);
+      }
+    }
+
+    els.refreshBtn.addEventListener('click', refresh);
+    els.retrySelectedBtn.addEventListener('click', async () => {
+      if (!state.selectedTaskId) {
+        alert('Select a task first.');
+        return;
+      }
+      await retryTask(state.selectedTaskId);
+    });
+    els.statusFilter.addEventListener('change', refresh);
+    els.sourceFilter.addEventListener('change', refresh);
+
+    refresh();
+    state.timer = setInterval(refresh, 5000);
+  </script>
+</body>
+</html>
+"""
+
             def _send_json(self, status: int, payload: dict) -> None:
                 data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
                 self.send_response(status)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+
+            def _send_html(self, status: int, html: str) -> None:
+                data = html.encode("utf-8")
+                self.send_response(status)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
                 self.send_header("Content-Length", str(len(data)))
                 self.end_headers()
                 self.wfile.write(data)
@@ -62,6 +388,9 @@ class HermesServer:
 
             def do_GET(self):  # noqa: N802
                 parsed = urlparse(self.path)
+                if parsed.path in {"/", "/ui"}:
+                    self.handle_ui()
+                    return
                 if parsed.path == "/health":
                     self.handle_health()
                     return
@@ -75,6 +404,10 @@ class HermesServer:
                     self.handle_get_task(parsed.path)
                     return
                 self._send_json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
+
+            def handle_ui(self):
+                logger.debug("ui requested remote=%s path=%s", self.client_address[0], self.path)
+                self._send_html(HTTPStatus.OK, self.UI_HTML)
 
             def handle_gitlab_webhook(self):
                 logger.info("webhook received path=%s remote=%s", self.path, self.client_address[0])

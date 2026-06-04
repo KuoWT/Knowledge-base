@@ -11,7 +11,7 @@ from .store import Store, utcnow_iso
 from .sync import run_git, sync_repository
 
 
-logger = logging.getLogger("knowledge_base_api.service")
+logger = logging.getLogger("kb_api.service")
 
 
 class HermesService:

@@ -12,7 +12,7 @@ from .markdown import parse_markdown
 from .qdrant import VectorPoint
 
 
-logger = logging.getLogger("knowledge_base_api.sync")
+logger = logging.getLogger("kb_api.sync")
 
 
 def run_git(repo_path: Path, *args: str) -> subprocess.CompletedProcess[str]:

@@ -232,7 +232,7 @@ flowchart TD
 6. 最後整理 agent 協作流程與使用規範。
 ## 18. 待確認項目
 - Agent 產生的內容是否需要先經人工審核。
-- 主分支名稱是否固定為 `master`。
+- 主分支名稱是否固定為 `main`。
 - Qdrant collection 命名規則。
 - metadata 需要保留到什麼程度。
 - 是否需要版本回溯與歷史查詢。

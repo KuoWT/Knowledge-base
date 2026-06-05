@@ -10,7 +10,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends git openssh-client ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-ENV GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new"
+ENV GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new -p 2222"
 
 RUN mkdir -p /root/.ssh \
     && chmod 700 /root/.ssh

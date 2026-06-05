@@ -275,89 +275,15 @@ curl "http://localhost:8081/api/v1/documents?path=README.md"
 
 The search endpoint returns ranked chunk matches from Qdrant, including `file_path`, `chunk_id`, `heading_path`, `text`, and the stored payload. The documents endpoint returns all indexed chunks for a single Markdown file.
 
-## Loki Logging
+## Monitoring
 
-Logs are emitted to standard output. For Loki, the recommended setup is:
+See [monitoring.md](/Users/kevin/Documents/知識庫%202/monitoring.md) for the consolidated Loki / Alloy / Promtail guide, including:
 
-1. Set `KB_API_LOG_FORMAT=json`.
-2. Let Promtail or Grafana Alloy scrape the container stdout.
-3. Use `logger`, `level`, `message`, `task_id`, `path`, and `status` as labels or parsed fields on the Loki side.
-
-Example Loki-ready compose setting:
-
-```yaml
-environment:
-  KB_API_LOG_FORMAT: json
-labels:
-  app: knowledge-base-api
-  component: api
-  env: prod
-  team: knowledge-base
-```
-
-Recommended label rules:
-
-- Keep labels low-cardinality and stable.
-- Use labels for service identity, not request data.
-- Keep `task_id`, `commit_sha`, `file_path`, `branch`, and similar values in the JSON log body, not as labels.
-
-Example log shape:
-
-```json
-{"timestamp":"2026-06-06T00:00:00+00:00","level":"INFO","logger":"kb_api.server","message":"request completed","remote":"127.0.0.1","method":"GET","path":"/health","status":200,"duration_ms":2.31}
-```
-
-### Promtail example
-
-Use [deploy/promtail-config.yml](/Users/kevin/Documents/知識庫%202/deploy/promtail-config.yml) as a starting point if you want Promtail to scrape Docker stdout and forward logs to Loki.
-
-Minimal Promtail container example:
-
-```bash
-docker run --rm \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v $(pwd)/deploy/promtail-config.yml:/etc/promtail/config.yml \
-  grafana/promtail:latest \
-  -config.file=/etc/promtail/config.yml
-```
-
-Recommended Loki queries:
-
-```logql
-{app="knowledge-base-api"}
-{app="knowledge-base-api", level="ERROR"}
-{app="knowledge-base-api", logger="kb_api.server"}
-{app="knowledge-base-api"} |= "task failed"
-{app="knowledge-base-api"} |= "webhook accepted"
-```
-
-If you need task-level tracing, filter by `task_id` in the JSON log payload or add a parsed label only for short-lived debugging.
-
-### Grafana Alloy example
-
-Use [deploy/alloy-config.alloy](/Users/kevin/Documents/知識庫%202/deploy/alloy-config.alloy) if you want Grafana Alloy to read Docker logs and forward them to Loki.
-
-Minimal Alloy container example:
-
-```bash
-docker run --rm \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v $(pwd)/deploy/alloy-config.alloy:/etc/alloy/config.alloy \
-  grafana/alloy:latest \
-  run /etc/alloy/config.alloy
-```
-
-Alloy UI is usually available on `http://localhost:12345` when running the container with the default ports.
-
-Recommended LogQL queries:
-
-```logql
-{app="knowledge-base-api"}
-{app="knowledge-base-api", level="ERROR"}
-{app="knowledge-base-api", logger="kb_api.server"}
-{app="knowledge-base-api"} |= "task failed"
-{app="knowledge-base-api"} |= "request completed"
-```
+- JSON log format
+- Docker Compose labels
+- Grafana Alloy configuration
+- Promtail legacy configuration
+- Example LogQL queries
 
 ## Notes
 

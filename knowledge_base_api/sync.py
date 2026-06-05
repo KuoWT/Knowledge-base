@@ -183,6 +183,7 @@ def sync_repository(
     for rel_path in changed_files:
         previous_point_ids = store.list_index_record_ids_for_file(rel_path)
         if previous_point_ids:
+            qdrant_writer.delete(collection, previous_point_ids)
             deleted_points.extend(previous_point_ids)
         content = read_file(repo_path, rel_path)
         if not content:
@@ -191,8 +192,6 @@ def sync_repository(
         upsert_points.extend(points)
     if upsert_points:
         qdrant_writer.upsert(collection, upsert_points)
-    if deleted_points:
-        qdrant_writer.delete(collection, deleted_points)
     if commit_sha:
         store.set_value("last_synced_sha", commit_sha)
     logger.info(

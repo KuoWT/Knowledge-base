@@ -5,6 +5,7 @@ import hashlib
 import json
 import subprocess
 import threading
+import uuid
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
@@ -67,6 +68,11 @@ def resolve_revision(repo_path: Path, revision: str | None) -> str | None:
 
 def file_sha(content: str) -> str:
     return hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+
+def stable_point_id(file_path: str, chunk_id: str) -> str:
+    source = f"{file_path}:{chunk_id}"
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, source))
 
 
 def pseudo_embedding(text: str, dims: int = 8) -> list[float]:
@@ -135,11 +141,13 @@ def build_points(
     content_hash = file_sha(content)
     logger.info("building points rel_path=%s chunks=%s", rel_path, len(chunks))
     for chunk in chunks:
+        point_id = stable_point_id(rel_path, chunk.chunk_id)
         payload = {
             "task_id": task_id,
             "file_path": rel_path,
             "file_name": Path(rel_path).name,
             "chunk_id": chunk.chunk_id,
+            "point_key": f"{rel_path}:{chunk.chunk_id}",
             "heading_path": chunk.heading_path,
             "commit_sha": commit_sha,
             "branch": branch,
@@ -149,7 +157,7 @@ def build_points(
         }
         points.append(
             VectorPoint(
-                id=f"{rel_path}:{chunk.chunk_id}",
+                id=point_id,
                 vector=pseudo_embedding(chunk.text),
                 payload=payload,
             )

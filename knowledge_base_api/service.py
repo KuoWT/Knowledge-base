@@ -8,7 +8,7 @@ from typing import Any
 
 from .qdrant import HttpQdrantWriter, LocalQdrantWriter
 from .store import Store, utcnow_iso
-from .sync import run_git, sync_repository
+from .sync import pseudo_embedding, run_git, sync_repository
 
 
 logger = logging.getLogger("kb_api.service")
@@ -26,6 +26,21 @@ class HermesService:
         if self.config.qdrant_url:
             return HttpQdrantWriter(self.config.qdrant_url, api_key=self.config.qdrant_api_key)
         return LocalQdrantWriter()
+
+    def _qdrant_filter(
+        self,
+        *,
+        file_path: str | None = None,
+        branch: str | None = None,
+    ) -> dict[str, Any] | None:
+        must: list[dict[str, Any]] = []
+        if file_path:
+            must.append({"key": "file_path", "match": {"value": file_path}})
+        if branch:
+            must.append({"key": "branch", "match": {"value": branch}})
+        if not must:
+            return None
+        return {"must": must}
 
     def enqueue_sync(
         self,
@@ -147,3 +162,90 @@ class HermesService:
                 chunk_id=point.id,
                 payload={"collection": self.config.qdrant_collection, **point.to_json()},
             )
+
+    def search_documents(
+        self,
+        query_text: str,
+        *,
+        limit: int = 10,
+        file_path: str | None = None,
+        branch: str | None = None,
+    ) -> dict[str, Any]:
+        query_text = query_text.strip()
+        if not query_text:
+            raise ValueError("query_text is required")
+        writer = self.qdrant_writer()
+        results = writer.query(
+            self.config.qdrant_collection,
+            pseudo_embedding(query_text),
+            max(1, min(limit, 50)),
+            filters=self._qdrant_filter(file_path=file_path, branch=branch),
+        )
+        items: list[dict[str, Any]] = []
+        for item in results:
+            payload = item.get("payload") or {}
+            items.append(
+                {
+                    "id": item.get("id"),
+                    "score": item.get("score"),
+                    "file_path": payload.get("file_path"),
+                    "file_name": payload.get("file_name"),
+                    "chunk_id": payload.get("chunk_id"),
+                    "heading_path": payload.get("heading_path"),
+                    "position": payload.get("position"),
+                    "branch": payload.get("branch"),
+                    "commit_sha": payload.get("commit_sha"),
+                    "content_hash": payload.get("content_hash"),
+                    "text": payload.get("text"),
+                    "text_preview": payload.get("text_preview"),
+                    "payload": payload,
+                }
+            )
+        return {
+            "query": query_text,
+            "limit": len(items),
+            "items": items,
+        }
+
+    def get_document_chunks(
+        self,
+        file_path: str,
+        *,
+        branch: str | None = None,
+        limit: int = 100,
+    ) -> dict[str, Any]:
+        file_path = file_path.strip()
+        if not file_path:
+            raise ValueError("file_path is required")
+        writer = self.qdrant_writer()
+        results = writer.scroll(
+            self.config.qdrant_collection,
+            max(1, min(limit, 200)),
+            filters=self._qdrant_filter(file_path=file_path, branch=branch),
+            order_by="position",
+        )
+        items: list[dict[str, Any]] = []
+        for item in results:
+            payload = item.get("payload") or {}
+            items.append(
+                {
+                    "id": item.get("id"),
+                    "score": item.get("score"),
+                    "file_path": payload.get("file_path"),
+                    "file_name": payload.get("file_name"),
+                    "chunk_id": payload.get("chunk_id"),
+                    "heading_path": payload.get("heading_path"),
+                    "position": payload.get("position"),
+                    "branch": payload.get("branch"),
+                    "commit_sha": payload.get("commit_sha"),
+                    "content_hash": payload.get("content_hash"),
+                    "text": payload.get("text"),
+                    "text_preview": payload.get("text_preview"),
+                    "payload": payload,
+                }
+            )
+        return {
+            "file_path": file_path,
+            "count": len(items),
+            "items": items,
+        }

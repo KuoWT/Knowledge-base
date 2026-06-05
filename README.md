@@ -41,6 +41,13 @@ flowchart TD
   T --> V[GET /api/v1/sync-tasks/{task_id}]
   T --> W[POST /api/v1/sync-tasks/{task_id}/retry]
 
+  A2[Agent / App] --> B2[GET /api/v1/search?q=...]
+  A2 --> C2[GET /api/v1/documents?path=...]
+  B2 --> D2[Qdrant query]
+  C2 --> E2[Qdrant scroll]
+  D2 --> F2[Ranked chunks + metadata]
+  E2 --> G2[Ordered document chunks]
+
   X[GET /health] --> Y[Liveness]
   Z[GET /ready] --> AA[DB / Repo / Git checks]
 ```
@@ -135,6 +142,8 @@ API endpoints:
 - `GET /api/v1/sync-tasks/{task_id}`
 - `POST /api/v1/sync-tasks/{task_id}/retry`
 - `POST /api/v1/reindex`
+- `GET /api/v1/search?q=...`
+- `GET /api/v1/documents?path=...`
 
 Environment variables:
 
@@ -149,6 +158,15 @@ Environment variables:
 - `QDRANT_URL` optional Qdrant REST endpoint
 - `QDRANT_API_KEY` optional Qdrant Cloud API key
 - `QDRANT_COLLECTION` default `knowledge_base`
+
+Query examples:
+
+```bash
+curl "http://localhost:8081/api/v1/search?q=meeting%20index&limit=5"
+curl "http://localhost:8081/api/v1/documents?path=README.md"
+```
+
+The search endpoint returns ranked chunk matches from Qdrant, including `file_path`, `chunk_id`, `heading_path`, `text`, and the stored payload. The documents endpoint returns all indexed chunks for a single Markdown file.
 
 ## Notes
 

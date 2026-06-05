@@ -26,6 +26,24 @@ class QdrantWriter:
     def delete(self, collection: str, ids: list[str]) -> None:
         raise NotImplementedError
 
+    def query(
+        self,
+        collection: str,
+        vector: list[float],
+        limit: int,
+        filters: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        raise NotImplementedError
+
+    def scroll(
+        self,
+        collection: str,
+        limit: int,
+        filters: dict[str, Any] | None = None,
+        order_by: str | None = None,
+    ) -> list[dict[str, Any]]:
+        raise NotImplementedError
+
 
 class LocalQdrantWriter(QdrantWriter):
     def __init__(self) -> None:
@@ -40,6 +58,24 @@ class LocalQdrantWriter(QdrantWriter):
     def delete(self, collection: str, ids: list[str]) -> None:
         # Local adapter records no-op deletes; the task log still reflects the operation.
         return None
+
+    def query(
+        self,
+        collection: str,
+        vector: list[float],
+        limit: int,
+        filters: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        return []
+
+    def scroll(
+        self,
+        collection: str,
+        limit: int,
+        filters: dict[str, Any] | None = None,
+        order_by: str | None = None,
+    ) -> list[dict[str, Any]]:
+        return []
 
 
 class HttpQdrantWriter(QdrantWriter):
@@ -78,6 +114,48 @@ class HttpQdrantWriter(QdrantWriter):
         payload = {"points": ids}
         self._request("POST", f"/collections/{collection}/points/delete?wait=true", payload)
 
+    def query(
+        self,
+        collection: str,
+        vector: list[float],
+        limit: int,
+        filters: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        payload: dict[str, Any] = {
+            "query": vector,
+            "limit": limit,
+            "with_payload": True,
+            "with_vector": False,
+        }
+        if filters:
+            payload["filter"] = filters
+        response = self._request("POST", f"/collections/{collection}/points/query", payload)
+        if not response:
+            return []
+        return response.get("result") or []
+
+    def scroll(
+        self,
+        collection: str,
+        limit: int,
+        filters: dict[str, Any] | None = None,
+        order_by: str | None = None,
+    ) -> list[dict[str, Any]]:
+        payload: dict[str, Any] = {
+            "limit": limit,
+            "with_payload": True,
+            "with_vector": False,
+        }
+        if filters:
+            payload["filter"] = filters
+        if order_by:
+            payload["order_by"] = order_by
+        response = self._request("POST", f"/collections/{collection}/points/scroll", payload)
+        if not response:
+            return []
+        result = response.get("result") or {}
+        return result.get("points") or []
+
     def _collection_exists(self, collection: str) -> bool:
         try:
             self._request("GET", f"/collections/{collection}", None)
@@ -114,3 +192,21 @@ class NoopQdrantWriter(QdrantWriter):
 
     def delete(self, collection: str, ids: list[str]) -> None:
         return None
+
+    def query(
+        self,
+        collection: str,
+        vector: list[float],
+        limit: int,
+        filters: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        return []
+
+    def scroll(
+        self,
+        collection: str,
+        limit: int,
+        filters: dict[str, Any] | None = None,
+        order_by: str | None = None,
+    ) -> list[dict[str, Any]]:
+        return []

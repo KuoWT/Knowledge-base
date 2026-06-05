@@ -384,6 +384,12 @@ class HermesServer:
                 if parsed.path == "/api/v1/reindex":
                     self.handle_reindex()
                     return
+                if parsed.path == "/api/v1/search":
+                    self.handle_search(parsed.query)
+                    return
+                if parsed.path == "/api/v1/documents":
+                    self.handle_document(parsed.query)
+                    return
                 self._send_json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
 
             def do_GET(self):  # noqa: N802
@@ -521,6 +527,70 @@ class HermesServer:
                 )
                 logger.info("manual reindex requested task_id=%s scope=%s", task.task_id, payload.get("scope"))
                 self._send_json(HTTPStatus.ACCEPTED, {"task_id": task.task_id, "status": task.status})
+
+            def handle_search(self, query: str):
+                params = parse_qs(query)
+                query_text = params.get("q", [""])[0].strip()
+                if not query_text:
+                    self._send_json(HTTPStatus.BAD_REQUEST, {"error": "query_required"})
+                    return
+                limit_raw = params.get("limit", ["10"])[0]
+                branch = params.get("branch", [None])[0]
+                file_path = params.get("file_path", [None])[0] or params.get("path", [None])[0]
+                try:
+                    limit = int(limit_raw)
+                except ValueError:
+                    self._send_json(HTTPStatus.BAD_REQUEST, {"error": "invalid_limit"})
+                    return
+                try:
+                    result = server.service.search_documents(
+                        query_text,
+                        limit=limit,
+                        file_path=file_path,
+                        branch=branch,
+                    )
+                except ValueError as exc:
+                    self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+                    return
+                logger.info(
+                    "search requested query=%s limit=%s file_path=%s branch=%s remote=%s",
+                    query_text,
+                    limit,
+                    file_path,
+                    branch,
+                    self.client_address[0],
+                )
+                self._send_json(HTTPStatus.OK, result)
+
+            def handle_document(self, query: str):
+                params = parse_qs(query)
+                file_path = params.get("path", [""])[0].strip() or params.get("file_path", [""])[0].strip()
+                if not file_path:
+                    self._send_json(HTTPStatus.BAD_REQUEST, {"error": "path_required"})
+                    return
+                branch = params.get("branch", [None])[0]
+                limit_raw = params.get("limit", ["100"])[0]
+                try:
+                    limit = int(limit_raw)
+                except ValueError:
+                    self._send_json(HTTPStatus.BAD_REQUEST, {"error": "invalid_limit"})
+                    return
+                try:
+                    result = server.service.get_document_chunks(
+                        file_path,
+                        branch=branch,
+                        limit=limit,
+                    )
+                except ValueError as exc:
+                    self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+                    return
+                logger.info(
+                    "document requested file_path=%s branch=%s remote=%s",
+                    file_path,
+                    branch,
+                    self.client_address[0],
+                )
+                self._send_json(HTTPStatus.OK, result)
 
             def handle_health(self):
                 logger.debug("health check remote=%s", self.client_address[0])

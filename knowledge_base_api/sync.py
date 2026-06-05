@@ -149,10 +149,12 @@ def build_points(
             "chunk_id": chunk.chunk_id,
             "point_key": f"{rel_path}:{chunk.chunk_id}",
             "heading_path": chunk.heading_path,
+            "position": chunk.position,
             "commit_sha": commit_sha,
             "branch": branch,
             "content_hash": content_hash,
             "collection": collection,
+            "text": chunk.text,
             "text_preview": chunk.text[:256],
         }
         points.append(

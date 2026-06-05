@@ -443,7 +443,14 @@ class HermesServer:
                     event_type=event_type,
                     project_id=str(payload.get("project_id") or payload.get("project", {}).get("id") or ""),
                     branch=target_branch,
-                    commit_sha=payload.get("after_sha") or payload.get("checkout_sha") or payload.get("commit_sha"),
+                    commit_sha=(
+                        object_attributes.get("merge_commit_sha")
+                        or object_attributes.get("squash_commit_sha")
+                        or object_attributes.get("last_commit", {}).get("id")
+                        or payload.get("after_sha")
+                        or payload.get("checkout_sha")
+                        or payload.get("commit_sha")
+                    ),
                     delivery_id=self.headers.get("X-Gitlab-Delivery") or payload.get("delivery_id"),
                     trigger_reason="webhook",
                 )

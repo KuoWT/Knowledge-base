@@ -55,6 +55,16 @@ def run_git(repo_path: Path, *args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def resolve_revision(repo_path: Path, revision: str | None) -> str | None:
+    if not revision:
+        return None
+    result = run_git(repo_path, "rev-parse", "--verify", "--quiet", f"{revision}^{{commit}}")
+    if result.returncode != 0:
+        logger.warning("invalid git revision revision=%s repo_path=%s", revision, repo_path)
+        return None
+    return result.stdout.strip() or None
+
+
 def file_sha(content: str) -> str:
     return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
@@ -70,6 +80,8 @@ def pseudo_embedding(text: str, dims: int = 8) -> list[float]:
 
 
 def read_tracked_files(repo_path: Path, base_sha: str | None, head_sha: str | None) -> list[str]:
+    base_sha = resolve_revision(repo_path, base_sha)
+    head_sha = resolve_revision(repo_path, head_sha)
     if not head_sha:
         result = run_git(repo_path, "rev-parse", "HEAD")
         if result.returncode != 0:
@@ -79,7 +91,14 @@ def read_tracked_files(repo_path: Path, base_sha: str | None, head_sha: str | No
         return read_repo_markdown_files(repo_path)
     result = run_git(repo_path, "diff", "--name-only", f"{base_sha}..{head_sha}")
     if result.returncode != 0:
-        raise RuntimeError(result.stderr.strip() or "failed to diff revisions")
+        logger.warning(
+            "git diff failed, falling back to full markdown scan repo_path=%s base_sha=%s head_sha=%s stderr=%s",
+            repo_path,
+            base_sha,
+            head_sha,
+            result.stderr.strip(),
+        )
+        return read_repo_markdown_files(repo_path)
     files = [line.strip() for line in result.stdout.splitlines() if line.strip().endswith(".md")]
     logger.debug("tracked files repo_path=%s base_sha=%s head_sha=%s files=%s", repo_path, base_sha, head_sha, files)
     return files

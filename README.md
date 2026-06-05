@@ -259,6 +259,7 @@ Environment variables:
 - `KB_API_MAIN_BRANCH` default `master`
 - `KB_API_WEBHOOK_TOKEN` optional shared token
 - `KB_API_LOG_LEVEL` default `INFO`
+- `KB_API_LOG_FORMAT` default `json` in Docker Compose, `text` otherwise
 - `QDRANT_URL` optional Qdrant REST endpoint
 - `QDRANT_API_KEY` optional Qdrant Cloud API key
 - `QDRANT_COLLECTION` default `knowledge_base`
@@ -272,6 +273,27 @@ curl "http://localhost:8081/api/v1/documents?path=README.md"
 ```
 
 The search endpoint returns ranked chunk matches from Qdrant, including `file_path`, `chunk_id`, `heading_path`, `text`, and the stored payload. The documents endpoint returns all indexed chunks for a single Markdown file.
+
+## Loki Logging
+
+Logs are emitted to standard output. For Loki, the recommended setup is:
+
+1. Set `KB_API_LOG_FORMAT=json`.
+2. Let Promtail or Grafana Alloy scrape the container stdout.
+3. Use `logger`, `level`, `message`, `task_id`, `path`, and `status` as labels or parsed fields on the Loki side.
+
+Example Loki-ready compose setting:
+
+```yaml
+environment:
+  KB_API_LOG_FORMAT: json
+```
+
+Example log shape:
+
+```json
+{"timestamp":"2026-06-06T00:00:00+00:00","level":"INFO","logger":"kb_api.server","message":"request completed","remote":"127.0.0.1","method":"GET","path":"/health","status":200,"duration_ms":2.31}
+```
 
 ## Notes
 

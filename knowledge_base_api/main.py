@@ -4,6 +4,7 @@ import logging
 import os
 
 from .config import load_config
+from .logging_utils import configure_logging
 from .server import HermesServer
 from .service import HermesService
 from .store import Store
@@ -11,10 +12,8 @@ from .store import Store
 
 def main() -> None:
     log_level = os.getenv("KB_API_LOG_LEVEL", "INFO").upper()
-    logging.basicConfig(
-        level=getattr(logging, log_level, logging.INFO),
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    )
+    log_format = os.getenv("KB_API_LOG_FORMAT", "text")
+    configure_logging(log_level, log_format=log_format)
     logger = logging.getLogger("kb_api")
     config = load_config()
     store = Store(config.db_path)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 import threading
 import uuid
 from http import HTTPStatus
@@ -346,6 +347,7 @@ class HermesServer:
 
             def _send_json(self, status: int, payload: dict) -> None:
                 data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+                self._status_code = status
                 self.send_response(status)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
                 self.send_header("Content-Length", str(len(data)))
@@ -354,6 +356,7 @@ class HermesServer:
 
             def _send_html(self, status: int, html: str) -> None:
                 data = html.encode("utf-8")
+                self._status_code = status
                 self.send_response(status)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
                 self.send_header("Content-Length", str(len(data)))
@@ -371,45 +374,61 @@ class HermesServer:
                 return
 
             def do_POST(self):  # noqa: N802
+                start = time.perf_counter()
+                self._status_code = HTTPStatus.OK
                 parsed = urlparse(self.path)
-                if parsed.path == "/webhooks/gitlab":
-                    self.handle_gitlab_webhook()
-                    return
-                if parsed.path == "/api/v1/sync-tasks":
-                    self.handle_create_task()
-                    return
-                if parsed.path.endswith("/retry"):
-                    self.handle_retry_task(parsed.path)
-                    return
-                if parsed.path == "/api/v1/reindex":
-                    self.handle_reindex()
-                    return
-                if parsed.path == "/api/v1/search":
-                    self.handle_search(parsed.query)
-                    return
-                if parsed.path == "/api/v1/documents":
-                    self.handle_document(parsed.query)
-                    return
-                self._send_json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
+                try:
+                    if parsed.path == "/webhooks/gitlab":
+                        self.handle_gitlab_webhook()
+                        return
+                    if parsed.path == "/api/v1/sync-tasks":
+                        self.handle_create_task()
+                        return
+                    if parsed.path.endswith("/retry"):
+                        self.handle_retry_task(parsed.path)
+                        return
+                    if parsed.path == "/api/v1/reindex":
+                        self.handle_reindex()
+                        return
+                    if parsed.path == "/api/v1/search":
+                        self.handle_search(parsed.query)
+                        return
+                    if parsed.path == "/api/v1/documents":
+                        self.handle_document(parsed.query)
+                        return
+                    self._send_json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
+                finally:
+                    self._log_access("POST", start)
 
             def do_GET(self):  # noqa: N802
+                start = time.perf_counter()
+                self._status_code = HTTPStatus.OK
                 parsed = urlparse(self.path)
-                if parsed.path in {"/", "/ui"}:
-                    self.handle_ui()
-                    return
-                if parsed.path == "/health":
-                    self.handle_health()
-                    return
-                if parsed.path == "/ready":
-                    self.handle_ready()
-                    return
-                if parsed.path == "/api/v1/sync-tasks":
-                    self.handle_list_tasks(parsed.query)
-                    return
-                if parsed.path.startswith("/api/v1/sync-tasks/"):
-                    self.handle_get_task(parsed.path)
-                    return
-                self._send_json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
+                try:
+                    if parsed.path in {"/", "/ui"}:
+                        self.handle_ui()
+                        return
+                    if parsed.path == "/health":
+                        self.handle_health()
+                        return
+                    if parsed.path == "/ready":
+                        self.handle_ready()
+                        return
+                    if parsed.path == "/api/v1/sync-tasks":
+                        self.handle_list_tasks(parsed.query)
+                        return
+                    if parsed.path.startswith("/api/v1/sync-tasks/"):
+                        self.handle_get_task(parsed.path)
+                        return
+                    if parsed.path == "/api/v1/search":
+                        self.handle_search(parsed.query)
+                        return
+                    if parsed.path == "/api/v1/documents":
+                        self.handle_document(parsed.query)
+                        return
+                    self._send_json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
+                finally:
+                    self._log_access("GET", start)
 
             def handle_ui(self):
                 logger.debug("ui requested remote=%s path=%s", self.client_address[0], self.path)
@@ -652,6 +671,19 @@ class HermesServer:
                 except Exception:
                     logger.exception("ready check qdrant failed")
                     return False
+
+            def _log_access(self, method: str, start: float) -> None:
+                duration_ms = round((time.perf_counter() - start) * 1000, 2)
+                logger.info(
+                    "request completed",
+                    extra={
+                        "remote": self.client_address[0],
+                        "method": method,
+                        "path": self.path,
+                        "status": int(getattr(self, "_status_code", HTTPStatus.OK)),
+                        "duration_ms": duration_ms,
+                    },
+                )
 
         return Handler
 

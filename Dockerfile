@@ -10,6 +10,10 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends git openssh-client ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
+RUN mkdir -p /root/.ssh \
+    && ssh-keyscan -H github.com gitlab.com >> /root/.ssh/known_hosts \
+    && chmod 600 /root/.ssh/known_hosts
+
 COPY setup.py /app/setup.py
 COPY knowledge_base_api /app/knowledge_base_api
 

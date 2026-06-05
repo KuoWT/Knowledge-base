@@ -48,8 +48,8 @@ flowchart TD
   D2 --> F2[Ranked chunks + metadata]
   E2 --> G2[Ordered document chunks]
 
-  X[GET /health] --> Y[Liveness]
-  Z[GET /ready] --> AA[DB / Repo / Git checks]
+X[GET /health] --> Y[Liveness]
+Z[GET /ready] --> AA[DB / Repo / Git / Qdrant checks]
 ```
 
 ## Run
@@ -131,7 +131,7 @@ Qdrant connection notes:
 Health endpoints:
 
 - `GET /health` returns service liveness
-- `GET /ready` returns dependency readiness checks
+- `GET /ready` returns dependency readiness checks, including Qdrant collection bootstrap
 - `GET /` or `GET /ui` opens the task monitor page
 
 API endpoints:
@@ -158,6 +158,7 @@ Environment variables:
 - `QDRANT_URL` optional Qdrant REST endpoint
 - `QDRANT_API_KEY` optional Qdrant Cloud API key
 - `QDRANT_COLLECTION` default `knowledge_base`
+- On startup, the service bootstraps the Qdrant collection automatically when `QDRANT_URL` is set
 
 Query examples:
 

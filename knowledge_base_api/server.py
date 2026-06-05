@@ -606,6 +606,7 @@ class HermesServer:
                     "db": self._check_db(),
                     "repo": self._check_repo(),
                     "git": self._check_git(),
+                    "qdrant": self._check_qdrant(),
                 }
                 ready = all(checks.values())
                 payload = {
@@ -642,6 +643,14 @@ class HermesServer:
                     return result.returncode == 0
                 except Exception:
                     logger.exception("ready check git failed")
+                    return False
+
+            def _check_qdrant(self) -> bool:
+                try:
+                    server.service.ensure_qdrant_collection()
+                    return True
+                except Exception:
+                    logger.exception("ready check qdrant failed")
                     return False
 
         return Handler

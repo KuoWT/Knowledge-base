@@ -190,6 +190,17 @@ document = client.get_document("README.md", branch="master")
 task = client.get_task("task_xxx")
 ```
 
+### Agent adapter
+
+```python
+from knowledge_base_api import KnowledgeBaseAdapter
+
+adapter = KnowledgeBaseAdapter.from_url("http://localhost:8081", token="your-webhook-token")
+items = adapter.search_knowledge_base("meeting index")
+doc = adapter.get_document("README.md")
+status = adapter.get_task_status("task_xxx")
+```
+
 Environment variables:
 
 - `KB_API_HOST` default `127.0.0.1`

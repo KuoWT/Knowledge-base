@@ -179,6 +179,17 @@ This repo exposes a stable agent-facing query contract so Hermes or other agents
 - Agents must not connect to SQLite directly
 - Agents may generate patches or update suggestions, but final publication still goes through Git / webhook / sync
 
+### Python client
+
+```python
+from knowledge_base_api import KnowledgeBaseClient
+
+client = KnowledgeBaseClient("http://localhost:8081", token="your-webhook-token")
+results = client.search("meeting index", limit=5, branch="master")
+document = client.get_document("README.md", branch="master")
+task = client.get_task("task_xxx")
+```
+
 Environment variables:
 
 - `KB_API_HOST` default `127.0.0.1`

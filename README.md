@@ -333,6 +333,32 @@ Recommended Loki queries:
 
 If you need task-level tracing, filter by `task_id` in the JSON log payload or add a parsed label only for short-lived debugging.
 
+### Grafana Alloy example
+
+Use [deploy/alloy-config.alloy](/Users/kevin/Documents/知識庫%202/deploy/alloy-config.alloy) if you want Grafana Alloy to read Docker logs and forward them to Loki.
+
+Minimal Alloy container example:
+
+```bash
+docker run --rm \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v $(pwd)/deploy/alloy-config.alloy:/etc/alloy/config.alloy \
+  grafana/alloy:latest \
+  run /etc/alloy/config.alloy
+```
+
+Alloy UI is usually available on `http://localhost:12345` when running the container with the default ports.
+
+Recommended LogQL queries:
+
+```logql
+{app="knowledge-base-api"}
+{app="knowledge-base-api", level="ERROR"}
+{app="knowledge-base-api", logger="kb_api.server"}
+{app="knowledge-base-api"} |= "task failed"
+{app="knowledge-base-api"} |= "request completed"
+```
+
 ## Notes
 
 The implementation is intentionally small and standard-library only so it can be extended without dependency setup.

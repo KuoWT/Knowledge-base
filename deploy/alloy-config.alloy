@@ -1,0 +1,70 @@
+logging {
+  level  = "info"
+  format = "logfmt"
+}
+
+discovery.docker "linux" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "logs_integrations_docker" {
+  targets = []
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "service_name"
+  }
+}
+
+loki.source.docker "knowledge_base_api" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.docker.linux.targets
+  labels        = { app = "knowledge-base-api", component = "api" }
+  relabel_rules = discovery.relabel.logs_integrations_docker.rules
+  forward_to    = [loki.process.knowledge_base_api.receiver]
+}
+
+loki.process "knowledge_base_api" {
+  forward_to = [loki.write.local.receiver]
+
+  stage.docker {}
+
+  stage.json {
+    source = "log"
+    expressions = {
+      timestamp    = "timestamp"
+      level        = "level"
+      logger       = "logger"
+      message      = "message"
+      task_id      = "task_id"
+      source       = "source"
+      event_type   = "event_type"
+      branch       = "branch"
+      commit_sha   = "commit_sha"
+      path         = "path"
+      status       = "status"
+      duration_ms  = "duration_ms"
+      remote       = "remote"
+      method       = "method"
+      collection   = "collection"
+    }
+  }
+
+  stage.labels {
+    values = {
+      level      = ""
+      logger     = ""
+      source     = ""
+      event_type = ""
+      branch     = ""
+      status     = ""
+    }
+  }
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

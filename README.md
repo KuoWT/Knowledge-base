@@ -145,6 +145,40 @@ API endpoints:
 - `GET /api/v1/search?q=...`
 - `GET /api/v1/documents?path=...`
 
+## Agent Query Contract v1
+
+This repo exposes a stable agent-facing query contract so Hermes or other agents can retrieve knowledge without talking directly to Qdrant or SQLite.
+
+### Read APIs
+
+- `GET /api/v1/search?q=...`
+- `GET /api/v1/documents?path=...`
+- `GET /api/v1/sync-tasks/{task_id}`
+
+### Response fields
+
+- `file_path`
+- `chunk_id`
+- `heading_path`
+- `position`
+- `text`
+- `score`
+- `commit_sha`
+- `branch`
+
+### Citation format
+
+- `[file_path#chunk_id]`
+- `[file_path#heading_path]`
+- `[task_id]`
+
+### Rules
+
+- Agents must query through `Knowledge Base API`
+- Agents must not connect to Qdrant directly
+- Agents must not connect to SQLite directly
+- Agents may generate patches or update suggestions, but final publication still goes through Git / webhook / sync
+
 Environment variables:
 
 - `KB_API_HOST` default `127.0.0.1`

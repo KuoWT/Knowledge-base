@@ -9,7 +9,7 @@ services:
       KB_API_PORT: "8080"
       KB_API_DB_PATH: /data/knowledge-base-api.db
       KB_API_REPO_PATH: /repo
-      KB_API_MAIN_BRANCH: main
+      KB_API_MAIN_BRANCH: master
       QDRANT_URL: ${QDRANT_URL:-}
       QDRANT_API_KEY: ${QDRANT_API_KEY:-}
       QDRANT_COLLECTION: knowledge_base
@@ -21,6 +21,8 @@ services:
       - hermes_data:/data
       - /home/obsidian-vault/1480AI:/repo
       - /root/.ssh:/root/.ssh
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 networks:
   default:

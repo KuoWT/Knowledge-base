@@ -59,7 +59,7 @@
 ### 7.1 觸發條件
 - 只接受 `merge 到主分支` 的正式同步事件。
 - 不以一般 push 作為正式索引觸發點。
-- 只在 merge request `action = merge` 且 `target_branch = main` 時建立任務。
+- 只在 merge request `action = merge` 且 `target_branch = master` 時建立任務。
 
 ### 7.2 Webhook 驗證
 建議採用以下其中一種或多種方式：
@@ -106,10 +106,10 @@
   "source": "gitlab_webhook",
   "event_type": "merge",
   "project_id": "123",
-  "branch": "main",
+  "branch": "master",
   "commit_sha": "abc123",
   "delivery_id": "delivery-001",
-  "trigger_reason": "merge_to_main"
+  "trigger_reason": "merge_to_master"
 }
 ```
 
@@ -299,7 +299,7 @@
 - 權限與管理 API 已加保護。
 
 ## 18. 待確認項目
-- 主分支是否固定為 `main`。
+- 主分支是否固定為 `master`。
 - 是否以 merge request merged 為唯一 webhook 來源。
 - chunk 長度與切分策略。
 - Embedding model 的版本與切換方式。

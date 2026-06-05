@@ -24,7 +24,7 @@ def load_config() -> Config:
         port=int(os.getenv("KB_API_PORT", "8080")),
         db_path=Path(os.getenv("KB_API_DB_PATH", "./knowledge-base-api.db")).expanduser(),
         repo_path=Path(os.getenv("KB_API_REPO_PATH", os.getcwd())).expanduser(),
-        main_branch=os.getenv("KB_API_MAIN_BRANCH", "main"),
+        main_branch=os.getenv("KB_API_MAIN_BRANCH", "master"),
         webhook_token=os.getenv("KB_API_WEBHOOK_TOKEN") or None,
         qdrant_url=os.getenv("QDRANT_URL") or None,
         qdrant_api_key=os.getenv("QDRANT_API_KEY") or None,

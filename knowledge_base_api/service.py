@@ -27,6 +27,19 @@ class HermesService:
             return HttpQdrantWriter(self.config.qdrant_url, api_key=self.config.qdrant_api_key)
         return LocalQdrantWriter()
 
+    def ensure_qdrant_collection(self) -> None:
+        if not self.config.qdrant_url:
+            logger.info("qdrant not configured; skip collection bootstrap")
+            return
+        writer = self.qdrant_writer()
+        vector_size = len(pseudo_embedding("__qdrant_bootstrap__"))
+        writer.ensure_collection(self.config.qdrant_collection, vector_size)
+        logger.info(
+            "qdrant collection ready collection=%s vector_size=%s",
+            self.config.qdrant_collection,
+            vector_size,
+        )
+
     def _qdrant_filter(
         self,
         *,

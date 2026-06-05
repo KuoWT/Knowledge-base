@@ -19,6 +19,7 @@ def main() -> None:
     config = load_config()
     store = Store(config.db_path)
     service = HermesService(config, store)
+    service.ensure_qdrant_collection()
     server = HermesServer(config, store, service)
     try:
         logger.info(

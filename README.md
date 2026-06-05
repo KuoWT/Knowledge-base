@@ -201,6 +201,54 @@ doc = adapter.get_document("README.md")
 status = adapter.get_task_status("task_xxx")
 ```
 
+## Hermes Agent Integration Flow
+
+這一頁描述 Hermes agent 如何透過 `KnowledgeBaseAdapter` 對接 Knowledge Base API。
+
+### Flow
+
+```mermaid
+flowchart TD
+  A[User] --> B[Hermes Agent]
+  B --> C[KnowledgeBaseAdapter]
+  C --> D[KnowledgeBaseClient]
+  D --> E[Knowledge Base API]
+  E --> F[Qdrant]
+  E --> G[SQLite task store]
+  E --> H[Git sync flow]
+```
+
+### Recommended usage
+
+1. 初始化 adapter。
+2. 先用 `search_knowledge_base()` 找相關 chunk。
+3. 再用 `get_document()` 讀完整文件 chunks。
+4. 若需要任務追蹤，使用 `get_task_status()`。
+5. 若要觸發更新，使用 `submit_update_request()` 或 `trigger_reindex()`。
+
+### Example
+
+```python
+from knowledge_base_api import KnowledgeBaseAdapter
+
+adapter = KnowledgeBaseAdapter.from_url("http://localhost:8081", token="your-webhook-token")
+
+results = adapter.search_knowledge_base("meeting index", limit=5)
+document = adapter.get_document("README.md", branch="master")
+task = adapter.get_task_status("task_xxx")
+
+print(results["items"][0]["text"])
+print(document["items"][0]["text"])
+print(task["status"])
+```
+
+### Interaction rules
+
+- Hermes agent should not connect to Qdrant directly.
+- Hermes agent should not connect to SQLite directly.
+- Hermes agent should use the adapter as the only read / update entrypoint.
+- Final publication of content still follows Git and webhook sync.
+
 Environment variables:
 
 - `KB_API_HOST` default `127.0.0.1`

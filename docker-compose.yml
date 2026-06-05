@@ -18,6 +18,11 @@ services:
       KB_API_LOG_FORMAT: ${KB_API_LOG_FORMAT:-json}
     ports:
       - "${KB_API_HOST_PORT:-8080}:8080"
+    labels:
+      app: knowledge-base-api
+      component: api
+      env: ${KB_API_ENV:-prod}
+      team: knowledge-base
     volumes:
       - hermes_data:/data
       - /home/obsidian-vault/1480AI:/repo

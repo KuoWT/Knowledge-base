@@ -260,6 +260,7 @@ Environment variables:
 - `KB_API_WEBHOOK_TOKEN` optional shared token
 - `KB_API_LOG_LEVEL` default `INFO`
 - `KB_API_LOG_FORMAT` default `json` in Docker Compose, `text` otherwise
+- `KB_API_ENV` default `prod` for Docker Compose labels
 - `QDRANT_URL` optional Qdrant REST endpoint
 - `QDRANT_API_KEY` optional Qdrant Cloud API key
 - `QDRANT_COLLECTION` default `knowledge_base`
@@ -287,7 +288,18 @@ Example Loki-ready compose setting:
 ```yaml
 environment:
   KB_API_LOG_FORMAT: json
+labels:
+  app: knowledge-base-api
+  component: api
+  env: prod
+  team: knowledge-base
 ```
+
+Recommended label rules:
+
+- Keep labels low-cardinality and stable.
+- Use labels for service identity, not request data.
+- Keep `task_id`, `commit_sha`, `file_path`, `branch`, and similar values in the JSON log body, not as labels.
 
 Example log shape:
 

@@ -24,7 +24,7 @@ class HermesService:
 
     def qdrant_writer(self):
         if self.config.qdrant_url:
-            return HttpQdrantWriter(self.config.qdrant_url)
+            return HttpQdrantWriter(self.config.qdrant_url, api_key=self.config.qdrant_api_key)
         return LocalQdrantWriter()
 
     def enqueue_sync(
@@ -138,6 +138,8 @@ class HermesService:
             result.get("upserted"),
             result.get("deleted"),
         )
+        for rel_path in result.get("changed_files", []):
+            self.store.delete_index_records_for_file(rel_path)
         for point in result.get("points", []):
             self.store.add_index_record(
                 task_id=task_id,

@@ -171,9 +171,11 @@ def sync_repository(
     deleted_points: list[str] = []
     logger.info("sync repository start task_id=%s changed_files=%s", task_id, changed_files)
     for rel_path in changed_files:
+        previous_point_ids = store.list_index_record_ids_for_file(rel_path)
+        if previous_point_ids:
+            deleted_points.extend(previous_point_ids)
         content = read_file(repo_path, rel_path)
         if not content:
-            deleted_points.append(rel_path)
             continue
         points = build_points(task_id, repo_path, rel_path, commit_sha or "", branch, collection)
         upsert_points.extend(points)

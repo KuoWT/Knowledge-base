@@ -14,6 +14,7 @@ class Config:
     main_branch: str
     webhook_token: str | None
     qdrant_url: str | None
+    qdrant_api_key: str | None
     qdrant_collection: str
 
 
@@ -26,5 +27,6 @@ def load_config() -> Config:
         main_branch=os.getenv("KB_API_MAIN_BRANCH", "master"),
         webhook_token=os.getenv("KB_API_WEBHOOK_TOKEN") or None,
         qdrant_url=os.getenv("QDRANT_URL") or None,
+        qdrant_api_key=os.getenv("QDRANT_API_KEY") or None,
         qdrant_collection=os.getenv("QDRANT_COLLECTION", "knowledge_base"),
     )

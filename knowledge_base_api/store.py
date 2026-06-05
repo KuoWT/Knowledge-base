@@ -217,5 +217,16 @@ class Store:
             result.append(payload)
         return result
 
+    def list_index_record_ids_for_file(self, file_path: str) -> list[str]:
+        rows = self.conn.execute(
+            "SELECT chunk_id FROM index_records WHERE file_path = ? ORDER BY created_at ASC",
+            (file_path,),
+        ).fetchall()
+        return [row["chunk_id"] for row in rows]
+
+    def delete_index_records_for_file(self, file_path: str) -> None:
+        self.conn.execute("DELETE FROM index_records WHERE file_path = ?", (file_path,))
+        self.conn.commit()
+
     def close(self) -> None:
         self.conn.close()

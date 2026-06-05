@@ -76,6 +76,7 @@ KB_API_MAIN_BRANCH=master
 KB_API_WEBHOOK_TOKEN=your-webhook-token
 KB_API_LOG_LEVEL=INFO
 QDRANT_URL=
+QDRANT_API_KEY=
 QDRANT_COLLECTION=knowledge_base
 ```
 
@@ -109,6 +110,15 @@ GitLab webhook settings:
 - The API checks `X-Gitlab-Token` against `KB_API_WEBHOOK_TOKEN`
 - If you use an SSH remote, the container uses `StrictHostKeyChecking=accept-new` so the first connection can trust a new host key automatically; if your host blocks that flow, switch the remote to HTTPS or pre-seed `known_hosts` in your environment.
 
+Qdrant connection notes:
+
+- Set `QDRANT_URL` to your Qdrant REST endpoint, for example `http://qdrant:6333`.
+- If you use Qdrant Cloud, also set `QDRANT_API_KEY`.
+- `QDRANT_COLLECTION` is the collection name used for indexed Markdown chunks.
+- The current demo embedding emits 8-dimensional vectors, so the collection must be created with vector size `8` if you keep the demo embedding.
+- Qdrant upsert uses `PUT /collections/{collection_name}/points` and delete points uses `POST /collections/{collection_name}/points/delete`.
+- Deletions are handled by point IDs, and this project uses stable IDs in the form `file_path:chunk_id`.
+
 Health endpoints:
 
 - `GET /health` returns service liveness
@@ -135,6 +145,7 @@ Environment variables:
 - `KB_API_WEBHOOK_TOKEN` optional shared token
 - `KB_API_LOG_LEVEL` default `INFO`
 - `QDRANT_URL` optional Qdrant REST endpoint
+- `QDRANT_API_KEY` optional Qdrant Cloud API key
 - `QDRANT_COLLECTION` default `knowledge_base`
 
 ## Notes

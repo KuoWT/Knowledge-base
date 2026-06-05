@@ -307,6 +307,32 @@ Example log shape:
 {"timestamp":"2026-06-06T00:00:00+00:00","level":"INFO","logger":"kb_api.server","message":"request completed","remote":"127.0.0.1","method":"GET","path":"/health","status":200,"duration_ms":2.31}
 ```
 
+### Promtail example
+
+Use [deploy/promtail-config.yml](/Users/kevin/Documents/知識庫%202/deploy/promtail-config.yml) as a starting point if you want Promtail to scrape Docker stdout and forward logs to Loki.
+
+Minimal Promtail container example:
+
+```bash
+docker run --rm \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v $(pwd)/deploy/promtail-config.yml:/etc/promtail/config.yml \
+  grafana/promtail:latest \
+  -config.file=/etc/promtail/config.yml
+```
+
+Recommended Loki queries:
+
+```logql
+{app="knowledge-base-api"}
+{app="knowledge-base-api", level="ERROR"}
+{app="knowledge-base-api", logger="kb_api.server"}
+{app="knowledge-base-api"} |= "task failed"
+{app="knowledge-base-api"} |= "webhook accepted"
+```
+
+If you need task-level tracing, filter by `task_id` in the JSON log payload or add a parsed label only for short-lived debugging.
+
 ## Notes
 
 The implementation is intentionally small and standard-library only so it can be extended without dependency setup.

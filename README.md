@@ -72,7 +72,7 @@ KB_API_PORT=8080
 KB_API_HOST_PORT=8081
 KB_API_DB_PATH=/data/knowledge-base-api.db
 KB_API_REPO_PATH=/repo
-KB_API_MAIN_BRANCH=main
+KB_API_MAIN_BRANCH=master
 KB_API_WEBHOOK_TOKEN=your-webhook-token
 KB_API_LOG_LEVEL=INFO
 QDRANT_URL=
@@ -131,7 +131,7 @@ Environment variables:
 - `KB_API_HOST_PORT` default `8080` for Docker Compose host mapping
 - `KB_API_DB_PATH` default `./knowledge-base-api.db`
 - `KB_API_REPO_PATH` default current working directory
-- `KB_API_MAIN_BRANCH` default `main`
+- `KB_API_MAIN_BRANCH` default `master`
 - `KB_API_WEBHOOK_TOKEN` optional shared token
 - `KB_API_LOG_LEVEL` default `INFO`
 - `QDRANT_URL` optional Qdrant REST endpoint

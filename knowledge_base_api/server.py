@@ -419,26 +419,41 @@ class HermesServer:
                         return
                 payload = self._read_json()
                 event_type = payload.get("event_type") or payload.get("object_kind")
-                if event_type not in {"merge", "merge_request", "merge_request_merged", "push"}:
+                if event_type != "merge_request":
                     logger.warning("webhook rejected unsupported event_type=%s", event_type)
                     self._send_json(HTTPStatus.BAD_REQUEST, {"error": "unsupported_event"})
                     return
-                if event_type == "push":
-                    ref = payload.get("ref", "")
-                    if not ref.endswith(f"/{server.config.main_branch}"):
-                        logger.info("webhook ignored non-main push ref=%s", ref)
-                        self._send_json(HTTPStatus.OK, {"status": "ignored"})
-                        return
+                object_attributes = payload.get("object_attributes") or {}
+                action = object_attributes.get("action")
+                target_branch = object_attributes.get("target_branch") or payload.get("target_branch")
+                if action != "merge":
+                    logger.info("webhook ignored non-merge action=%s", action)
+                    self._send_json(HTTPStatus.OK, {"status": "ignored"})
+                    return
+                if target_branch != server.config.main_branch:
+                    logger.info(
+                        "webhook ignored non-target branch target_branch=%s expected=%s",
+                        target_branch,
+                        server.config.main_branch,
+                    )
+                    self._send_json(HTTPStatus.OK, {"status": "ignored"})
+                    return
                 task = server.service.enqueue_sync(
                     source="gitlab_webhook",
                     event_type=event_type,
                     project_id=str(payload.get("project_id") or payload.get("project", {}).get("id") or ""),
-                    branch=payload.get("branch") or payload.get("ref_name") or server.config.main_branch,
+                    branch=target_branch,
                     commit_sha=payload.get("after_sha") or payload.get("checkout_sha") or payload.get("commit_sha"),
                     delivery_id=self.headers.get("X-Gitlab-Delivery") or payload.get("delivery_id"),
                     trigger_reason="webhook",
                 )
-                logger.info("webhook accepted task_id=%s event_type=%s branch=%s", task.task_id, event_type, task.branch)
+                logger.info(
+                    "webhook accepted task_id=%s event_type=%s action=%s target_branch=%s",
+                    task.task_id,
+                    event_type,
+                    action,
+                    target_branch,
+                )
                 self._send_json(HTTPStatus.ACCEPTED, {"task_id": task.task_id, "status": task.status})
 
             def handle_create_task(self):

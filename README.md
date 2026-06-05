@@ -107,7 +107,7 @@ GitLab webhook settings:
 - Secret token: same value as `KB_API_WEBHOOK_TOKEN`
 - Recommended event: `Merge request events`
 - The API checks `X-Gitlab-Token` against `KB_API_WEBHOOK_TOKEN`
-- If you use an SSH remote, the image already trusts `github.com` and `gitlab.com`; for another host, add its SSH host key or switch the remote to HTTPS.
+- If you use an SSH remote, the container uses `StrictHostKeyChecking=accept-new` so the first connection can trust a new host key automatically; if your host blocks that flow, switch the remote to HTTPS or pre-seed `known_hosts` in your environment.
 
 Health endpoints:
 

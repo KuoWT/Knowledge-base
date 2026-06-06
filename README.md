@@ -250,6 +250,33 @@ The example shows the full MCP exchange:
 
 Use this as the base when wiring Hermes agent to the MCP server.
 
+### Hermes MCP settings examples
+
+Three ready-to-use settings files are included under `examples/`:
+
+- [examples/hermes_mcp_settings_full.yaml](/Users/kevin/Documents/知識庫%202/examples/hermes_mcp_settings_full.yaml)
+  - Includes the existing Obsidian MCP server plus the new Knowledge Base MCP server.
+- [examples/hermes_mcp_settings_local.yaml](/Users/kevin/Documents/知識庫%202/examples/hermes_mcp_settings_local.yaml)
+  - Minimal local development setup for the Knowledge Base MCP server.
+- [examples/hermes_mcp_settings_server.yaml](/Users/kevin/Documents/知識庫%202/examples/hermes_mcp_settings_server.yaml)
+  - Server deployment setup for the Knowledge Base MCP server.
+
+All three examples use the same standard MCP command shape:
+
+```yaml
+mcp_servers:
+  knowledge_base:
+    command: python3
+    args:
+      - -m
+      - knowledge_base_api.mcp_server
+    enabled: true
+    timeout: 120
+    connect_timeout: 60
+```
+
+Use `KB_API_BASE_URL` to point at the running Knowledge Base API instance and `KB_API_WEBHOOK_TOKEN` to match the API token.
+
 ## Hermes Agent Integration Flow
 
 這一頁描述 Hermes agent 如何透過 `KnowledgeBaseAdapter` 對接 Knowledge Base API。

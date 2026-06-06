@@ -231,6 +231,25 @@ Available tools:
 - `submit_update_request`
 - `trigger_reindex`
 
+### MCP client example
+
+If you want Hermes agent or a local script to call the MCP tools directly, run the example client:
+
+```bash
+KB_API_BASE_URL=http://localhost:8081 \
+KB_API_WEBHOOK_TOKEN=your-webhook-token \
+python3 examples/mcp_client_example.py
+```
+
+The example shows the full MCP exchange:
+
+1. `initialize`
+2. `tools/list`
+3. `tools/call` for `search_knowledge_base`
+4. `tools/call` for `get_document`
+
+Use this as the base when wiring Hermes agent to the MCP server.
+
 ## Hermes Agent Integration Flow
 
 這一頁描述 Hermes agent 如何透過 `KnowledgeBaseAdapter` 對接 Knowledge Base API。

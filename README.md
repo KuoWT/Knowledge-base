@@ -1,5 +1,7 @@
 # Knowledge Base API
 
+Project overview: [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md)
+
 This repo contains a minimal, dependency-free Python implementation of the knowledge base sync flow:
 
 - GitLab webhook ingestion

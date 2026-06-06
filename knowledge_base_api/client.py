@@ -45,6 +45,12 @@ class KnowledgeBaseClient:
     def get_task(self, task_id: str) -> dict[str, Any]:
         return self._get(f"/api/v1/sync-tasks/{parse.quote(task_id, safe='')}")
 
+    def health_check(self) -> dict[str, Any]:
+        return self._get("/health")
+
+    def ready_check(self) -> dict[str, Any]:
+        return self._get("/ready")
+
     def list_tasks(
         self,
         *,

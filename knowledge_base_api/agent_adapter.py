@@ -42,6 +42,12 @@ class KnowledgeBaseAdapter:
     def get_task_status(self, task_id: str) -> dict[str, Any]:
         return self.client.get_task(task_id)
 
+    def health_check(self) -> dict[str, Any]:
+        return self.client.health_check()
+
+    def ready_check(self) -> dict[str, Any]:
+        return self.client.ready_check()
+
     def submit_update_request(
         self,
         *,

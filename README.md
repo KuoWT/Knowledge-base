@@ -201,6 +201,36 @@ doc = adapter.get_document("README.md")
 status = adapter.get_task_status("task_xxx")
 ```
 
+### MCP server
+
+If you want Hermes or another agent framework to consume the knowledge base through a standard tool interface, run the MCP server:
+
+```bash
+KB_API_BASE_URL=http://localhost:8081 \
+KB_API_WEBHOOK_TOKEN=your-webhook-token \
+python3 -m knowledge_base_api.mcp_server
+```
+
+Useful environment variables:
+
+- `KB_API_BASE_URL`: Knowledge Base API base URL used by the MCP server.
+- `KB_API_WEBHOOK_TOKEN`: Shared token for authenticated API calls.
+- `KB_API_HTTP_TIMEOUT`: HTTP timeout in seconds for the MCP server client.
+- `KB_API_MCP_LOG_LEVEL`: Log level for the MCP server process.
+
+Available tools:
+
+- `health_check`
+- `ready_check`
+- `search_knowledge_base`
+- `get_document`
+- `get_chunk`
+- `get_document_sources`
+- `get_task_status`
+- `list_tasks`
+- `submit_update_request`
+- `trigger_reindex`
+
 ## Hermes Agent Integration Flow
 
 這一頁描述 Hermes agent 如何透過 `KnowledgeBaseAdapter` 對接 Knowledge Base API。

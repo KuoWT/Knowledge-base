@@ -4,10 +4,45 @@ import uuid
 from pathlib import Path
 from unittest.mock import patch
 
-from knowledge_base_api.sync import stable_point_id, sync_repository
+from knowledge_base_api.sync import read_repo_markdown_files, read_tracked_files, stable_point_id, sync_repository
 
 
 class SyncTests(unittest.TestCase):
+    def test_read_repo_markdown_files_parses_null_separated_paths(self):
+        class Result:
+            returncode = 0
+            stdout = "Meeting/2026/2026W01 週報摘要.md\0Project/index.md\0"
+            stderr = ""
+
+        with patch("knowledge_base_api.sync.run_git", return_value=Result()):
+            files = read_repo_markdown_files(Path("/repo"))
+
+        self.assertEqual(files, ["Meeting/2026/2026W01 週報摘要.md", "Project/index.md"])
+
+    def test_read_tracked_files_parses_null_separated_diff_paths(self):
+        class Result:
+            def __init__(self, stdout="", returncode=0, stderr=""):
+                self.stdout = stdout
+                self.returncode = returncode
+                self.stderr = stderr
+
+        def fake_run_git(_repo_path, *args):
+            if args[:2] == ("rev-parse", "--verify"):
+                return Result(returncode=0, stdout="base-sha\n")
+            if args[:1] == ("rev-parse",):
+                return Result(returncode=0, stdout="head-sha\n")
+            if args[:2] == ("diff", "--name-only"):
+                return Result(returncode=0, stdout="README.md\0Project/index.md\0Meeting/2026/2026W01 週報摘要.md\0")
+            raise AssertionError(args)
+
+        with patch("knowledge_base_api.sync.run_git", side_effect=fake_run_git):
+            files = read_tracked_files(Path("/repo"), "base-sha", "head-sha")
+
+        self.assertEqual(
+            files,
+            ["README.md", "Project/index.md", "Meeting/2026/2026W01 週報摘要.md"],
+        )
+
     def test_stable_point_id_returns_uuid(self):
         point_id = stable_point_id("Meeting/2026/Meeting Index.md", "chunk-1")
         parsed = uuid.UUID(point_id)

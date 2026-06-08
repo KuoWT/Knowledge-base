@@ -95,6 +95,12 @@ def resolve_commit_sha(repo_path: Path, revision: str | None) -> str:
     return result.stdout.strip()
 
 
+def _split_git_paths(output: str) -> list[str]:
+    if "\0" in output:
+        return [item.strip().strip('"') for item in output.split("\0") if item.strip().strip('"')]
+    return [line.strip().strip('"') for line in output.splitlines() if line.strip().strip('"')]
+
+
 def read_tracked_files(repo_path: Path, base_sha: str | None, head_sha: str | None) -> list[str]:
     base_sha = resolve_revision(repo_path, base_sha)
     head_sha = resolve_revision(repo_path, head_sha)
@@ -105,7 +111,7 @@ def read_tracked_files(repo_path: Path, base_sha: str | None, head_sha: str | No
         head_sha = result.stdout.strip()
     if not base_sha:
         return read_repo_markdown_files(repo_path)
-    result = run_git(repo_path, "diff", "--name-only", f"{base_sha}..{head_sha}")
+    result = run_git(repo_path, "diff", "--name-only", "-z", f"{base_sha}..{head_sha}")
     if result.returncode != 0:
         logger.warning(
             "git diff failed, falling back to full markdown scan repo_path=%s base_sha=%s head_sha=%s stderr=%s",
@@ -115,16 +121,16 @@ def read_tracked_files(repo_path: Path, base_sha: str | None, head_sha: str | No
             result.stderr.strip(),
         )
         return read_repo_markdown_files(repo_path)
-    files = [line.strip() for line in result.stdout.splitlines() if line.strip().endswith(".md")]
+    files = [path for path in _split_git_paths(result.stdout) if path.endswith(".md")]
     logger.debug("tracked files repo_path=%s base_sha=%s head_sha=%s files=%s", repo_path, base_sha, head_sha, files)
     return files
 
 
 def read_repo_markdown_files(repo_path: Path) -> list[str]:
-    result = run_git(repo_path, "ls-files", "*.md")
+    result = run_git(repo_path, "ls-files", "-z", "--", "*.md")
     if result.returncode != 0:
         raise RuntimeError(result.stderr.strip() or "failed to list markdown files")
-    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    return [path for path in _split_git_paths(result.stdout) if path.endswith(".md")]
 
 
 def read_file(repo_path: Path, rel_path: str) -> str:

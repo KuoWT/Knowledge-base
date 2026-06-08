@@ -252,7 +252,6 @@ class HermesService:
             self.config.qdrant_collection,
             max(1, min(limit, 200)),
             filters=self._qdrant_filter(file_path=file_path, branch=branch),
-            order_by="position",
         )
         items: list[dict[str, Any]] = []
         for item in results:
@@ -277,6 +276,13 @@ class HermesService:
                     "payload": payload,
                 }
             )
+        items.sort(
+            key=lambda item: (
+                item.get("position") is None,
+                item.get("position") if isinstance(item.get("position"), (int, float)) else 0,
+                item.get("chunk_id") or "",
+            )
+        )
         return {
             "file_path": file_path,
             "count": len(items),

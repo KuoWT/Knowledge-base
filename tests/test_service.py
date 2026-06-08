@@ -133,6 +133,6 @@ class ServiceQueryTests(unittest.TestCase):
                         ]
                     },
                 )
-                self.assertEqual(writer.scroll_calls[0]["order_by"], "position")
+                self.assertIsNone(writer.scroll_calls[0]["order_by"])
             finally:
                 store.close()

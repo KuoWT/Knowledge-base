@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import asdict, dataclass
 from typing import Any
 from urllib import error, request
+
+
+logger = logging.getLogger("kb_api.qdrant")
 
 
 @dataclass
@@ -132,7 +136,7 @@ class HttpQdrantWriter(QdrantWriter):
         response = self._request("POST", f"/collections/{collection}/points/query", payload)
         if not response:
             return []
-        return response.get("result") or []
+        return self._extract_points(response)
 
     def scroll(
         self,
@@ -153,8 +157,21 @@ class HttpQdrantWriter(QdrantWriter):
         response = self._request("POST", f"/collections/{collection}/points/scroll", payload)
         if not response:
             return []
-        result = response.get("result") or {}
-        return result.get("points") or []
+        return self._extract_points(response)
+
+    def _extract_points(self, response: dict[str, Any]) -> list[dict[str, Any]]:
+        result = response.get("result")
+        if isinstance(result, list):
+            return [item for item in result if isinstance(item, dict)]
+        if isinstance(result, dict):
+            points = result.get("points")
+            if isinstance(points, list):
+                return [item for item in points if isinstance(item, dict)]
+            if isinstance(result.get("point"), dict):
+                return [result["point"]]
+        if result is not None:
+            logger.warning("unexpected qdrant response shape result_type=%s keys=%s", type(result).__name__, list(response.keys()))
+        return []
 
     def _collection_exists(self, collection: str) -> bool:
         try:

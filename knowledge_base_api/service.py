@@ -210,6 +210,9 @@ class HermesService:
         )
         items: list[dict[str, Any]] = []
         for item in results:
+            if not isinstance(item, dict):
+                logger.warning("unexpected qdrant query item type=%s value=%r", type(item).__name__, item)
+                continue
             payload = item.get("payload") or {}
             items.append(
                 {
@@ -253,6 +256,9 @@ class HermesService:
         )
         items: list[dict[str, Any]] = []
         for item in results:
+            if not isinstance(item, dict):
+                logger.warning("unexpected qdrant scroll item type=%s value=%r", type(item).__name__, item)
+                continue
             payload = item.get("payload") or {}
             items.append(
                 {

@@ -110,6 +110,11 @@ Provides a standard tool interface for agent frameworks. It is a thin wrapper ar
 - `POST /api/v1/sync-tasks/{task_id}/retry`
 - `POST /api/v1/reindex`
 
+`POST /api/v1/reindex` supports:
+
+- `scope: "repository"` to rebuild all indexed Markdown files.
+- `scope: "paths"` with `paths: [...]` to rebuild only selected files.
+
 ### Read / Query
 
 - `GET /api/v1/search?q=...`

@@ -147,6 +147,11 @@ API endpoints:
 - `GET /api/v1/search?q=...`
 - `GET /api/v1/documents?path=...`
 
+`POST /api/v1/reindex` supports:
+
+- `scope: "repository"` for a full Markdown repository rebuild.
+- `scope: "paths"` with `paths: [...]` for a subset rebuild.
+
 ## Agent Query Contract v1
 
 This repo exposes a stable agent-facing query contract so Hermes or other agents can retrieve knowledge without talking directly to Qdrant or SQLite.

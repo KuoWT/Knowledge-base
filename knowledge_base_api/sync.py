@@ -85,6 +85,16 @@ def pseudo_embedding(text: str, dims: int = 8) -> list[float]:
     return values
 
 
+def resolve_commit_sha(repo_path: Path, revision: str | None) -> str:
+    resolved = resolve_revision(repo_path, revision)
+    if resolved:
+        return resolved
+    result = run_git(repo_path, "rev-parse", "HEAD")
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.strip() or "failed to resolve HEAD")
+    return result.stdout.strip()
+
+
 def read_tracked_files(repo_path: Path, base_sha: str | None, head_sha: str | None) -> list[str]:
     base_sha = resolve_revision(repo_path, base_sha)
     head_sha = resolve_revision(repo_path, head_sha)
@@ -175,33 +185,71 @@ def sync_repository(
     commit_sha: str | None,
     branch: str,
     collection: str,
+    full_repository: bool = False,
+    paths: list[str] | None = None,
 ) -> dict[str, Any]:
-    changed_files = read_tracked_files(repo_path, store.get_value("last_synced_sha"), commit_sha)
+    requested_paths = [path.strip() for path in (paths or []) if path and path.strip().endswith(".md")]
+    effective_commit_sha = resolve_commit_sha(repo_path, commit_sha)
+    base_sha = store.get_value("last_synced_sha")
+    if full_repository:
+        changed_files = read_repo_markdown_files(repo_path)
+        previous_files = set(store.list_index_record_file_paths())
+        removed_files = sorted(previous_files - set(changed_files))
+        mode = "full_repository"
+    elif requested_paths:
+        changed_files = requested_paths
+        removed_files = []
+        mode = "paths"
+    else:
+        changed_files = read_tracked_files(repo_path, base_sha, effective_commit_sha)
+        removed_files = []
+        mode = "incremental"
     upsert_points: list[VectorPoint] = []
     deleted_points: list[str] = []
-    logger.info("sync repository start task_id=%s changed_files=%s", task_id, changed_files)
-    for rel_path in changed_files:
+    logger.info(
+        "sync repository start task_id=%s mode=%s base_sha=%s commit_sha=%s changed_files=%s removed_files=%s paths=%s",
+        task_id,
+        mode,
+        base_sha,
+        effective_commit_sha,
+        changed_files,
+        removed_files,
+        requested_paths,
+    )
+    for rel_path in changed_files + removed_files:
         previous_point_ids = store.list_index_record_ids_for_file(rel_path)
         if previous_point_ids:
             qdrant_writer.delete(collection, previous_point_ids)
             deleted_points.extend(previous_point_ids)
+    if full_repository:
+        logger.info(
+            "full repository rebuild selected task_id=%s current_files=%s removed_files=%s indexed_files=%s",
+            task_id,
+            len(changed_files),
+            len(removed_files),
+            len(store.list_index_record_file_paths()),
+        )
+    for rel_path in changed_files:
         content = read_file(repo_path, rel_path)
         if not content:
             continue
-        points = build_points(task_id, repo_path, rel_path, commit_sha or "", branch, collection)
+        points = build_points(task_id, repo_path, rel_path, effective_commit_sha, branch, collection)
         upsert_points.extend(points)
     if upsert_points:
         qdrant_writer.upsert(collection, upsert_points)
-    if commit_sha:
-        store.set_value("last_synced_sha", commit_sha)
+    if effective_commit_sha:
+        store.set_value("last_synced_sha", effective_commit_sha)
     logger.info(
-        "sync repository done task_id=%s upserted=%s deleted=%s",
+        "sync repository done task_id=%s mode=%s upserted=%s deleted=%s",
         task_id,
+        mode,
         len(upsert_points),
         len(deleted_points),
     )
     return {
+        "mode": mode,
         "changed_files": changed_files,
+        "removed_files": removed_files,
         "upserted": len(upsert_points),
         "deleted": len(deleted_points),
         "points": upsert_points,

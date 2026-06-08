@@ -224,6 +224,12 @@ class Store:
         ).fetchall()
         return [row["chunk_id"] for row in rows]
 
+    def list_index_record_file_paths(self) -> list[str]:
+        rows = self.conn.execute(
+            "SELECT DISTINCT file_path FROM index_records ORDER BY file_path ASC"
+        ).fetchall()
+        return [row["file_path"] for row in rows]
+
     def delete_index_records_for_file(self, file_path: str) -> None:
         self.conn.execute("DELETE FROM index_records WHERE file_path = ?", (file_path,))
         self.conn.commit()

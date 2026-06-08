@@ -144,11 +144,19 @@ class HermesService:
         task_id = job["task_id"]
         commit_sha = job.get("commit_sha")
         branch = job.get("branch") or self.config.main_branch
+        full_repository = bool(job.get("full_repository", False))
+        paths = job.get("paths") or []
         result = run_git(self.config.repo_path, "pull", "--ff-only")
         if result.returncode != 0:
             logger.error("git pull failed task_id=%s stderr=%s", task_id, result.stderr.strip())
             raise RuntimeError(result.stderr.strip() or "git pull failed")
-        logger.info("git pull ok task_id=%s branch=%s", task_id, branch)
+        logger.info(
+            "git pull ok task_id=%s branch=%s full_repository=%s paths=%s",
+            task_id,
+            branch,
+            full_repository,
+            paths,
+        )
         writer = self.qdrant_writer()
         result = sync_repository(
             repo_path=self.config.repo_path,
@@ -158,15 +166,21 @@ class HermesService:
             commit_sha=commit_sha,
             branch=branch,
             collection=self.config.qdrant_collection,
+            full_repository=full_repository,
+            paths=paths,
         )
         logger.info(
-            "sync completed task_id=%s changed_files=%s upserted=%s deleted=%s",
+            "sync completed task_id=%s mode=%s changed_files=%s removed_files=%s upserted=%s deleted=%s",
             task_id,
+            result.get("mode"),
             len(result.get("changed_files", [])),
+            len(result.get("removed_files", [])),
             result.get("upserted"),
             result.get("deleted"),
         )
         for rel_path in result.get("changed_files", []):
+            self.store.delete_index_records_for_file(rel_path)
+        for rel_path in result.get("removed_files", []):
             self.store.delete_index_records_for_file(rel_path)
         for point in result.get("points", []):
             self.store.add_index_record(
